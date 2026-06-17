@@ -99,7 +99,12 @@ func (a *AuthController) Logout(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", nil))
 		return
 	}
-	email := claimsRaw.(pkg.Claims).Email
+	claims, ok := claimsRaw.(*pkg.Claims)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", nil))
+		return
+	}
+	email := claims.Email
 
 	rawToken, exists := ctx.Get("raw_token")
 	if !exists {
@@ -118,7 +123,7 @@ func (a *AuthController) Logout(ctx *gin.Context) {
 
 // ResetPassword godoc
 // @Summary      Request a password reset token
-// @Description  Looks up the account by email and stores a short-lived PASSWORD_RESET token (5 min). Deliver this token to the user via email or SMS, then exchange it at POST /auth/reset/confirm.
+// @Description  Looks up the account by email and stores a short-lived PASSWORD_RESET token. Deliver this token to the user via email or SMS, then exchange it at POST /auth/reset/confirm.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
@@ -200,7 +205,11 @@ func (a *AuthController) ChangePassword(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", nil))
 		return
 	}
-	claims := claimsRaw.(pkg.Claims)
+	claims, ok := claimsRaw.(*pkg.Claims)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", nil))
+		return
+	}
 
 	var body dto.ChangeAndPasswordRequest
 	if err := ctx.ShouldBindBodyWithJSON(&body); err != nil {

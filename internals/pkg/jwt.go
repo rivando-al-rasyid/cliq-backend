@@ -15,8 +15,8 @@ const AccessTokenExpiry = 15 * time.Minute
 // ResetTokenExpiry is the lifetime of a short-lived password-reset JWT.
 const ResetTokenExpiry = 10 * time.Minute
 
-// // AccessTokenSubject is the JWT "sub" claim used for normal access token.
-// const AccessTokenSubject = "access"
+// AccessTokenSubject is the JWT "sub" claim used for normal access tokens.
+const AccessTokenSubject = "access"
 
 // ResetTokenSubject is the JWT "sub" claim used exclusively for password-reset JWTs.
 const ResetTokenSubject = "password-reset"
