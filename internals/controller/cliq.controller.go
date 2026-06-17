@@ -20,14 +20,14 @@ func NewCliqController(cliqService *service.CliqService) *CliqController {
 }
 
 // CreateSlug godoc
-// @Summary      Create a new slug
-// @Description  Generates a shortened URL slug for an authenticated user.
+// @Summary      Create a new short link
+// @Description  Creates a shortened URL using the slug provided by the frontend.
 // @Tags         cliq
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Param        body           body      dto.Link  true  "Slug Creation Payload"
-// @Success      201            {object}  dto.Response "Slug created successfully"
+// @Success      201            {object}  dto.Response "Short link created successfully"
 // @Failure      400            {object}  dto.Response "Invalid request payload"
 // @Failure      401            {object}  dto.Response "Unauthorized / Invalid token"
 // @Failure      500            {object}  dto.Response "Internal server error"
@@ -75,7 +75,7 @@ func (c *CliqController) CreateSlug(ctx *gin.Context) {
 
 	ctx.JSON(
 		http.StatusCreated,
-		dto.NewSuccess("Slug created successfully", gin.H{
+		dto.NewSuccess("Short link created successfully", gin.H{
 			"slug": slug,
 		}),
 	)
