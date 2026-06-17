@@ -10,8 +10,8 @@ RUN go mod download
 
 COPY . .
 
-RUN GOOS=linux go build -trimpath -ldflags="-s -w" -o ./vanwallet ./cmd/main.go
+RUN GOOS=linux go build -trimpath -ldflags="-s -w" -o ./cliq ./cmd/main.go
 
 EXPOSE 8080
 
-CMD ["./vanwallet"]
+CMD ["./cliq"]
