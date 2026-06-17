@@ -2,9 +2,9 @@ package dto
 
 type Response struct {
 	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"` // omitempty prevents rendering null/empty values
+	Data    any    `json:"data,omitempty"`
 	Success bool   `json:"isSuccess"`
-	Error   string `json:"error,omitempty"` // omitempty hides it when empty
+	Error   string `json:"error,omitempty"`
 }
 
 // NewSuccess builds a successful response with a payload.

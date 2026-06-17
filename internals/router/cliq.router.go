@@ -4,13 +4,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/rivando-al-rasyid/cliq/internals/controller"
+	"github.com/rivando-al-rasyid/cliq/internals/middleware"
+	"github.com/rivando-al-rasyid/cliq/internals/repository"
+	"github.com/rivando-al-rasyid/cliq/internals/service"
 )
 
 func CliqRouter(router *gin.Engine, db *pgxpool.Pool, rdb *redis.Client) {
-	// txRepo := repository.NewCliqRepo(db)
-	// txServ := service.NewCliqService(txRepo, rdb)
-	// txCont := controller.NewAuthController(txServ)
+	linkRepo := repository.NewCliqRepo(db)
+	linkServ := service.NewCliqService(linkRepo, rdb)
+	linkCont := controller.NewCliqController(linkServ)
 
-	// cliq := router.Group("/cliq", middleware.VerifyTokenWithDB(db))
+	cliq := router.Group("/link", middleware.VerifyTokenWithDB(db))
 
+	cliq.POST("create", linkCont.CreateSlug)
 }

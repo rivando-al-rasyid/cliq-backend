@@ -36,7 +36,6 @@ definitions:
         type: string
     required:
     - origin_link
-    - slug
     type: object
   dto.LoginRequest:
     properties:
@@ -82,10 +81,8 @@ definitions:
     type: object
   dto.Response:
     properties:
-      data:
-        description: omitempty prevents rendering null/empty values
+      data: {}
       error:
-        description: omitempty hides it when empty
         type: string
       isSuccess:
         type: boolean

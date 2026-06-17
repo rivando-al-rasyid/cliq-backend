@@ -683,8 +683,7 @@ const docTemplate = `{
         "dto.Link": {
             "type": "object",
             "required": [
-                "origin_link",
-                "slug"
+                "origin_link"
             ],
             "properties": {
                 "origin_link": {
@@ -759,11 +758,8 @@ const docTemplate = `{
         "dto.Response": {
             "type": "object",
             "properties": {
-                "data": {
-                    "description": "omitempty prevents rendering null/empty values"
-                },
+                "data": {},
                 "error": {
-                    "description": "omitempty hides it when empty",
                     "type": "string"
                 },
                 "isSuccess": {
