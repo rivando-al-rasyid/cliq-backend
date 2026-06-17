@@ -46,19 +46,25 @@ func extractAndVerifyBearer(ctx *gin.Context, logTag string) (string, pkg.Claims
 	if err := claims.VerifyJWT(rawToken); err != nil {
 		log.Printf("[%s] JWT error: %v", logTag, err)
 
-		if errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenInvalidIssuer) {
+		switch {
+		case errors.Is(err, jwt.ErrTokenExpired):
 			ctx.AbortWithStatusJSON(
 				http.StatusUnauthorized,
-				dto.NewError("Unauthorized", err),
+				dto.NewError("Token expired", err),
 			)
 
-			return "", pkg.Claims{}, err
-		}
+		case errors.Is(err, jwt.ErrTokenInvalidIssuer):
+			ctx.AbortWithStatusJSON(
+				http.StatusUnauthorized,
+				dto.NewError("Invalid token issuer", err),
+			)
 
-		ctx.AbortWithStatusJSON(
-			http.StatusUnauthorized,
-			dto.NewError("Unauthorized", errors.New("invalid token")),
-		)
+		default:
+			ctx.AbortWithStatusJSON(
+				http.StatusUnauthorized,
+				dto.NewError("Invalid token", errors.New("invalid token")),
+			)
+		}
 
 		return "", pkg.Claims{}, err
 	}
@@ -66,14 +72,26 @@ func extractAndVerifyBearer(ctx *gin.Context, logTag string) (string, pkg.Claims
 	return rawToken, claims, nil
 }
 
-// VerifyTokenWithDB validates the JWT signature and checks the tokens table
-// token must exist, is_revoked = false, expires_at > now().
+// VerifyTokenWithDB validates normal access JWT and checks the tokens table.
+// Token must exist, is_revoked = false, expires_at > now().
 func VerifyTokenWithDB(db *pgxpool.Pool) gin.HandlerFunc {
 	authRepo := repository.NewAuthRepo(db)
 
 	return func(ctx *gin.Context) {
 		rawToken, claims, err := extractAndVerifyBearer(ctx, "VerifyToken")
 		if err != nil {
+			return
+		}
+
+		if claims.Subject != pkg.AccessTokenSubject {
+			ctx.AbortWithStatusJSON(
+				http.StatusForbidden,
+				dto.NewError(
+					"Forbidden",
+					errors.New("this token cannot be used for normal access"),
+				),
+			)
+
 			return
 		}
 
@@ -108,9 +126,7 @@ func VerifyTokenWithDB(db *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-// VerifyResetToken validates a JWT issued by ConfirmResetPassword.
-// It enforces sub == pkg.ResetTokenSubject so that a normal access token
-// cannot be used to reach the change-password endpoint.
+// VerifyResetToken validates a JWT issued for reset password.
 // Reset JWTs are not stored in the tokens table, so no DB lookup is needed.
 func VerifyResetToken() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -124,7 +140,7 @@ func VerifyResetToken() gin.HandlerFunc {
 				http.StatusForbidden,
 				dto.NewError(
 					"Forbidden",
-					errors.New("this token cannot be used for this operation"),
+					errors.New("this token cannot be used for password reset"),
 				),
 			)
 

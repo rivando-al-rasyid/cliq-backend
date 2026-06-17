@@ -28,6 +28,16 @@ definitions:
     required:
     - token
     type: object
+  dto.Link:
+    properties:
+      origin_link:
+        type: string
+      slug:
+        type: string
+    required:
+    - origin_link
+    - slug
+    type: object
   dto.LoginRequest:
     properties:
       email:
@@ -72,8 +82,10 @@ definitions:
     type: object
   dto.Response:
     properties:
-      data: {}
+      data:
+        description: omitempty prevents rendering null/empty values
       error:
+        description: omitempty hides it when empty
         type: string
       isSuccess:
         type: boolean
@@ -91,13 +103,6 @@ definitions:
       phone:
         type: string
       photo:
-        type: string
-    type: object
-  dto.UserResponse:
-    properties:
-      email:
-        type: string
-      id:
         type: string
     type: object
 host: localhost:8080
@@ -128,12 +133,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: object
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
@@ -169,12 +169,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
@@ -197,12 +192,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: object
-              type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
@@ -234,12 +224,7 @@ paths:
         "201":
           description: Created
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/dto.UserResponse'
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
@@ -275,12 +260,7 @@ paths:
         "201":
           description: Created
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
@@ -316,12 +296,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
@@ -337,6 +312,42 @@ paths:
       summary: Confirm reset token and obtain a password-reset JWT
       tags:
       - Authentication
+  /link/create:
+    post:
+      consumes:
+      - application/json
+      description: Generates a shortened URL slug for an authenticated user.
+      parameters:
+      - description: Slug Creation Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Link'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Slug created successfully
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized / Invalid token
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new slug
+      tags:
+      - cliq
   /profile:
     get:
       consumes:
@@ -420,7 +431,6 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       security:
-      - BearerAuth: []
       - BearerAuth: []
       summary: Modify active user profile records
       tags:

@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"errors"
-	"log"
 	"os"
 	"time"
 
@@ -11,19 +10,20 @@ import (
 )
 
 // AccessTokenExpiry is the lifetime of an access JWT.
-const AccessTokenExpiry = 24 * time.Hour
+const AccessTokenExpiry = 15 * time.Minute
 
 // ResetTokenExpiry is the lifetime of a short-lived password-reset JWT.
 const ResetTokenExpiry = 10 * time.Minute
 
+// AccessTokenSubject is the JWT "sub" claim used for normal access token.
+const AccessTokenSubject = "access"
+
 // ResetTokenSubject is the JWT "sub" claim used exclusively for password-reset JWTs.
-// The change-password middleware checks for this value so a normal access token
-// cannot be used to reach the change-password endpoint.
 const ResetTokenSubject = "password-reset"
 
 type Claims struct {
-	ID    uuid.UUID
-	Email string
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -33,14 +33,13 @@ func NewClaims(id uuid.UUID, email string) *Claims {
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    os.Getenv("JWT_ISSUER"),
+			Subject:   AccessTokenSubject,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 }
 
-// NewResetClaims returns a short-lived Claims scoped only for changing a password.
-// The Subject field is set to ResetTokenSubject so the middleware can distinguish
-// this token from a normal access token.
 func NewResetClaims(id uuid.UUID, email string) *Claims {
 	return &Claims{
 		ID:    id,
@@ -49,6 +48,7 @@ func NewResetClaims(id uuid.UUID, email string) *Claims {
 			Issuer:    os.Getenv("JWT_ISSUER"),
 			Subject:   ResetTokenSubject,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ResetTokenExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 }
@@ -58,31 +58,55 @@ func (c *Claims) GenJWT() (string, error) {
 	if jwtSecret == "" {
 		return "", errors.New("missing jwt secret")
 	}
-	uToken := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
-	return uToken.SignedString([]byte(jwtSecret))
+
+	jwtIssuer := os.Getenv("JWT_ISSUER")
+	if jwtIssuer == "" {
+		return "", errors.New("missing jwt issuer")
+	}
+
+	if c.Issuer == "" {
+		c.Issuer = jwtIssuer
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
+
+	signedToken, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
 }
 
-func (c *Claims) VerifyJWT(token string) error {
+func (c *Claims) VerifyJWT(rawToken string) error {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return errors.New("missing jwt secret")
 	}
-	log.Println("[JWT] Verifying token")
-	jwtToken, err := jwt.ParseWithClaims(token, c, func(t *jwt.Token) (any, error) {
+
+	jwtIssuer := os.Getenv("JWT_ISSUER")
+	if jwtIssuer == "" {
+		return errors.New("missing jwt issuer")
+	}
+
+	token, err := jwt.ParseWithClaims(rawToken, c, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrTokenSignatureInvalid
+		}
+
 		return []byte(jwtSecret), nil
 	})
 	if err != nil {
 		return err
 	}
-	if !jwtToken.Valid {
-		return jwt.ErrTokenExpired
+
+	if !token.Valid {
+		return jwt.ErrTokenInvalidClaims
 	}
-	iss, err := jwtToken.Claims.GetIssuer()
-	if err != nil {
-		return err
-	}
-	if iss != os.Getenv("JWT_ISSUER") {
+
+	if c.Issuer != jwtIssuer {
 		return jwt.ErrTokenInvalidIssuer
 	}
+
 	return nil
 }
