@@ -21,7 +21,7 @@ func NewAuthController(authservice *service.AuthService) *AuthController {
 
 // Register godoc
 // @Summary      Register a new user
-// @Description  Creates a new user account along with a profile, wallet, and PIN record.
+// @Description  Creates a new user account along with a profile
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
@@ -116,42 +116,6 @@ func (a *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.NewSuccessNoData("Logged out successfully"))
-}
-
-// GetPIN godoc
-// @Summary      Get PIN status
-// @Description  Returns whether a transaction PIN has been set for the authenticated user.
-// @Tags         Authentication
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  dto.Response{data=string}
-// @Failure      401  {object}  dto.Response{error}
-// @Failure      404  {object}  dto.Response{error}
-// @Failure      500  {object}  dto.Response{error}
-// @Router       /auth/pin [get]
-func (a *AuthController) GetPIN(ctx *gin.Context) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", "Missing claims"))
-		return
-	}
-
-	email := claims.(pkg.Claims).Email
-	pin, err := a.authservice.GetUserPin(ctx.Request.Context(), email)
-	if err != nil {
-		if err.Error() == "user pin not found" {
-			ctx.JSON(http.StatusNotFound, dto.NewError("Failed to fetch PIN", "PIN not set for this user"))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, dto.NewError("Failed to fetch PIN", "Internal server error"))
-		return
-	}
-	if pin.PinHash == nil || len(*pin.PinHash) == 0 {
-		ctx.JSON(http.StatusNotFound, dto.NewError("Failed to fetch PIN", "PIN not set for this user"))
-		return
-	}
-	ctx.JSON(http.StatusOK, dto.NewSuccess("PIN successfully retrieved", pin.PinHash))
 }
 
 // ResetPassword godoc

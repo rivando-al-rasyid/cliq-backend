@@ -97,43 +97,6 @@ func (p *ProfileRepo) EditProfile(ctx context.Context, email string, updates map
 	return profile, nil
 }
 
-func (p *ProfileRepo) EditPin(ctx context.Context, email string, newPinHash string) (model.UserPin, error) {
-	var userPin model.UserPin
-	err := p.db.QueryRow(ctx, `
-        UPDATE user_pins
-        SET pin_hash = $2, updated_at = now()
-        FROM users u
-        WHERE user_pins.user_id = u.id
-          AND u.email = $1
-        RETURNING
-            user_pins.pin_hash,
-            user_pins.failed_attempts,
-            user_pins.locked_until,
-            user_pins.updated_at`, email, newPinHash,
-	).Scan(&userPin.PinHash, &userPin.FailedAttempts, &userPin.LockedUntil, &userPin.UpdatedAt)
-	if err != nil {
-		return model.UserPin{}, fmt.Errorf("EditPin: %w", err)
-	}
-	return userPin, nil
-}
-
-func (p *ProfileRepo) GetCurrentPinHash(ctx context.Context, email string) (string, error) {
-	var hash string
-	err := p.db.QueryRow(ctx, `
-		SELECT COALESCE(up.pin_hash, '')
-		FROM user_pins up
-		JOIN users u ON up.user_id = u.id
-		WHERE u.email = $1`, email,
-	).Scan(&hash)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", nil // no PIN row → treat as not set
-		}
-		return "", fmt.Errorf("GetCurrentPinHash: %w", err)
-	}
-	return hash, nil
-}
-
 // GetCurrentPassword returns the bcrypt hash of the user's current password.
 func (p *ProfileRepo) GetCurrentPassword(ctx context.Context, email string) (string, error) {
 	var hash string

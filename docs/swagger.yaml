@@ -216,47 +216,11 @@ paths:
       summary: Logout
       tags:
       - Authentication
-  /auth/pin:
-    get:
-      consumes:
-      - application/json
-      description: Returns whether a transaction PIN has been set for the authenticated
-        user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: string
-              type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - BearerAuth: []
-      summary: Get PIN status
-      tags:
-      - Authentication
   /auth/register:
     post:
       consumes:
       - application/json
-      description: Creates a new user account along with a profile, wallet, and PIN
-        record.
+      description: Creates a new user account along with a profile
       parameters:
       - description: Registration credentials
         in: body

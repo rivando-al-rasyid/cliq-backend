@@ -19,7 +19,7 @@ func NewAuthRepo(db *pgxpool.Pool) *Authrepo {
 	return &Authrepo{db: db}
 }
 
-// Register creates a user, profile, user_pin, and wallet atomically in one transaction.
+// Register creates a user, profile,  and wallet atomically in one transaction.
 func (a *Authrepo) Register(ctx context.Context, email, hashpwd string) (model.User, error) {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
@@ -44,12 +44,6 @@ func (a *Authrepo) Register(ctx context.Context, email, hashpwd string) (model.U
 	}
 
 	if _, err = tx.Exec(ctx,
-		`INSERT INTO user_pins (user_id, pin_hash) VALUES ($1, NULL)`, user.ID,
-	); err != nil {
-		return model.User{}, fmt.Errorf("Register insert user_pin: %w", err)
-	}
-
-	if _, err = tx.Exec(ctx,
 		`INSERT INTO wallets (user_id) VALUES ($1)`, user.ID,
 	); err != nil {
 		return model.User{}, fmt.Errorf("Register insert wallet: %w", err)
@@ -70,23 +64,6 @@ func (a *Authrepo) Login(ctx context.Context, email string) (model.User, error) 
 		return model.User{}, err
 	}
 	return user, nil
-}
-
-func (a *Authrepo) GetUserPin(ctx context.Context, email string) (model.UserPin, error) {
-	var userpin model.UserPin
-	err := a.db.QueryRow(ctx, `
-		SELECT up.pin_hash
-		FROM user_pins up
-		JOIN users u ON up.user_id = u.id
-		WHERE u.email = $1`, email,
-	).Scan(&userpin.PinHash)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return model.UserPin{}, errors.New("user pin not found")
-		}
-		return model.UserPin{}, err
-	}
-	return userpin, nil
 }
 
 // SaveToken inserts a new token row into the tokens table.

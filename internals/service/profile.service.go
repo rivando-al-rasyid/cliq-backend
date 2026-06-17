@@ -13,7 +13,7 @@ import (
 
 type ProfileRepository interface {
 	UserProfile(ctx context.Context, email string) (model.Profile, error)
-	GetUserInfo(ctx context.Context, email string) (model.Profile, int64, error)
+	GetUserInfo(ctx context.Context, email string) (model.Profile, error)
 	EditProfile(ctx context.Context, email string, updates map[string]any) (model.Profile, error)
 	EditPassword(ctx context.Context, email string, newPassword string) (model.User, error)
 	GetCurrentPassword(ctx context.Context, email string) (string, error)
@@ -32,7 +32,7 @@ func (s *ProfileService) GetProfile(ctx context.Context, email string) (model.Pr
 }
 
 // GetUserInfo returns profile fields and total balance — used for the app header.
-func (s *ProfileService) GetUserInfo(ctx context.Context, email string) (model.Profile, int64, error) {
+func (s *ProfileService) GetUserInfo(ctx context.Context, email string) (model.Profile, error) {
 	return s.repo.GetUserInfo(ctx, email)
 }
 
