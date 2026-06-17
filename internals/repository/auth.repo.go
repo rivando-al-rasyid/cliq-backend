@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,9 +26,11 @@ func (a *Authrepo) Register(ctx context.Context, email, hashpwd string) (model.U
 	if err != nil {
 		return model.User{}, fmt.Errorf("Register begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 	var user model.User
+
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users (email, password) VALUES ($1, $2)
 		 RETURNING id, email, created_at`,
@@ -37,8 +40,12 @@ func (a *Authrepo) Register(ctx context.Context, email, hashpwd string) (model.U
 		return model.User{}, fmt.Errorf("Register insert user: %w", err)
 	}
 
+	fullName := strings.Split(email, "@")[0]
+
 	if _, err = tx.Exec(ctx,
-		`INSERT INTO profiles (user_id) VALUES ($1)`, user.ID,
+		`INSERT INTO profiles (user_id, full_name) VALUES ($1, $2)`,
+		user.ID,
+		fullName,
 	); err != nil {
 		return model.User{}, fmt.Errorf("Register insert profile: %w", err)
 	}
@@ -46,6 +53,7 @@ func (a *Authrepo) Register(ctx context.Context, email, hashpwd string) (model.U
 	if err = tx.Commit(ctx); err != nil {
 		return model.User{}, fmt.Errorf("Register commit: %w", err)
 	}
+
 	return user, nil
 }
 
