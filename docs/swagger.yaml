@@ -1,0 +1,645 @@
+basePath: /
+definitions:
+  dto.ChangeAndPasswordRequest:
+    properties:
+      new_password:
+        example: NewP@ssw0rd!
+        minLength: 8
+        type: string
+    required:
+    - new_password
+    type: object
+  dto.ChangePasswordRequest:
+    properties:
+      old_password:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - old_password
+    - password
+    type: object
+  dto.ConfirmResetPassword:
+    properties:
+      token:
+        example: abc123xyz
+        type: string
+    required:
+    - token
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: P@ssw0rd123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.ProfileResponse:
+    properties:
+      full_name:
+        type: string
+      phone:
+        type: string
+      photo:
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: P@ssw0rd123
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.ResetPasswordRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    required:
+    - email
+    type: object
+  dto.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      isSuccess:
+        type: boolean
+      message:
+        type: string
+    type: object
+  dto.SetPinRequest:
+    properties:
+      old_pin:
+        type: string
+      pin_hash:
+        type: string
+    required:
+    - pin_hash
+    type: object
+  dto.UserInfoResponse:
+    properties:
+      current_balance:
+        type: integer
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      phone:
+        type: string
+      photo:
+        type: string
+      pin_hash:
+        type: string
+      wallet_id:
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
+  dto.VerifyPinRequest:
+    properties:
+      pin:
+        type: string
+    required:
+    - pin
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend Vanwallet  using Gin
+  license:
+    name: MIT
+  title: Vanwallet
+  version: "1.0"
+paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Replaces the user's password. Requires the short-lived JWT returned
+        by POST /auth/reset/confirm as a Bearer token (sub must be "password-reset").
+      parameters:
+      - description: New password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangeAndPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Set a new password using a password-reset JWT
+      tags:
+      - Authentication
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Verifies email and password, then issues a signed JWT access token.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revokes the current access token, invalidating the session.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Authentication
+  /auth/pin:
+    get:
+      consumes:
+      - application/json
+      description: Returns whether a transaction PIN has been set for the authenticated
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get PIN status
+      tags:
+      - Authentication
+  /auth/pin/verify:
+    post:
+      consumes:
+      - application/json
+      description: Validates the transaction PIN for the authenticated user.
+      parameters:
+      - description: PIN to verify
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.VerifyPinRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Verify transaction PIN
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account along with a profile, wallet, and PIN
+        record.
+      parameters:
+      - description: Registration credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Register a new user
+      tags:
+      - Authentication
+  /auth/reset:
+    post:
+      consumes:
+      - application/json
+      description: Looks up the account by email and stores a short-lived PASSWORD_RESET
+        token (5 min). Deliver this token to the user via email or SMS, then exchange
+        it at POST /auth/reset/confirm.
+      parameters:
+      - description: Registered email address
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Request a password reset token
+      tags:
+      - Authentication
+  /auth/reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Validates the opaque PASSWORD_RESET token issued by POST /auth/reset,
+        revokes it (single-use), and returns a short-lived JWT (10 min, sub="password-reset").
+        Use this JWT as a Bearer token when calling POST /auth/change-password.
+      parameters:
+      - description: Reset token (from email/SMS)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ConfirmResetPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Confirm reset token and obtain a password-reset JWT
+      tags:
+      - Authentication
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves current authentication details' full name, telephone
+        connection code, and user avatar endpoint.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ProfileResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user profile details
+      tags:
+      - Profile
+  /profile/change/pin:
+    patch:
+      consumes:
+      - application/json
+      description: 'First-time setup: provide only pin_hash. Changing existing PIN:
+        provide old_pin + pin_hash.'
+      parameters:
+      - description: PIN update payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SetPinRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user secondary authorization pin
+      tags:
+      - Profile
+  /profile/edit:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Updates system details including full name text, phone data info,
+        and multipart image form attachments.
+      parameters:
+      - description: Updated full identity name representation
+        in: formData
+        name: full_name
+        type: string
+      - description: Target telecommunications contact identity sequence
+        in: formData
+        name: phone
+        type: string
+      - description: Binary source file image attachment content
+        in: formData
+        name: photo
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      summary: Modify active user profile records
+      tags:
+      - Profile
+  /profile/info:
+    get:
+      consumes:
+      - application/json
+      description: Assembles structured systemic components including identities,
+        security states, and financial metrics.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserInfoResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get unified system user statistics context
+      tags:
+      - Profile
+  /profile/password:
+    patch:
+      consumes:
+      - application/json
+      description: Modifies internal account validation strings. Requires old confirmation
+        verification strings.
+      parameters:
+      - description: Password structure swap payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Modify security entry password credentials
+      tags:
+      - Profile
+securityDefinitions:
+  BearerAuth:
+    description: 'Type "Bearer" followed by a space and your JWT. Example: "Bearer
+      eyJhbGci..."'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
