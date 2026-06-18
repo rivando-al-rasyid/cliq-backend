@@ -1,541 +1,310 @@
-# Cliq Backend
+# Cliq Frontend
 
-Cliq Backend is a REST API for a shortlink / URL shortener application built with **Go**, **Gin**, **PostgreSQL**, and **Redis**.
+Cliq Frontend is the React client for the Cliq short link application. It lets users register, log in, create short links, manage dashboard links, copy short URLs, and access protected pages using the backend's HttpOnly cookie authentication flow.
 
-It handles authentication, shortlink creation, custom slug management, link redirection, profile management, password reset, and protected user routes.
+> This repository contains only the frontend application. The Go backend should live in a separate repository and be configured through environment variables.
 
-> Cliq is a learning and portfolio project.
+---
+
+## Features
+
+- Landing page with short link form
+- Register and login pages
+- React Router data-mode loaders and actions
+- Guest-only auth routes
+- Protected dashboard routes
+- Cookie-based authentication through backend HttpOnly cookie
+- No JWT storage in `localStorage`
+- Dashboard link list with pagination data
+- Create short link page
+- Custom slug validation
+- Reserved slug validation
+- Delete link action
+- Profile page
+- SweetAlert2 feedback
+- Tailwind CSS and daisyUI styling
+- Lucide icons
 
 ---
 
 ## Tech Stack
 
-* Go
-* Gin
-* PostgreSQL
-* Redis
-* JWT Authentication
-* Docker
-* Docker Compose
-* golang-migrate
-* Swagger
+- React `19`
+- Vite `8`
+- React Router `8`
+- Tailwind CSS `4`
+- daisyUI `5`
+- SweetAlert2
+- Lucide React
+- react-qr-code
+- ESLint
 
 ---
 
 ## Project Structure
 
 ```txt
-cliq/
-├── database/
-│   ├── migrations/
-│   └── seed.sql
-├── docs/
-├── internals/
-│   ├── config/
-│   ├── controller/
-│   ├── dto/
-│   ├── middleware/
-│   ├── model/
-│   ├── pkg/
-│   ├── repository/
-│   ├── router/
-│   └── service/
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-├── go.mod
-├── go.sum
-└── env.example
+cliq-frontend/
+├── public/
+│   ├── favicon.svg
+│   └── icons.svg
+├── src/
+│   ├── assets/
+│   ├── components/
+│   │   ├── LinkCard.jsx
+│   │   ├── footer.jsx
+│   │   └── header.jsx
+│   ├── layouts/
+│   │   ├── AppLayout.jsx
+│   │   └── AuthLayout.jsx
+│   ├── pages/
+│   │   ├── CreateLinkPage.jsx
+│   │   ├── DashboardPage.jsx
+│   │   ├── LandingPage.jsx
+│   │   ├── LoginPage.jsx
+│   │   ├── ProfilePage.jsx
+│   │   └── RegisterPage.jsx
+│   ├── utils/
+│   │   ├── api.js
+│   │   ├── auth.action.js
+│   │   ├── auth.js
+│   │   ├── link.action.js
+│   │   ├── link.loader.js
+│   │   └── sweetAlert.js
+│   ├── index.css
+│   └── main.jsx
+├── eslint.config.js
+├── index.html
+├── package.json
+├── package-lock.json
+└── vite.config.js
 ```
 
 ---
 
 ## Requirements
 
-### Local Development
-
-* Go
-* PostgreSQL
-* Redis
-* golang-migrate
-* Make
-
-### Docker Development
-
-* Docker
-* Docker Compose
+- Node.js
+- npm
+- Running Cliq backend API
 
 ---
 
 ## Environment Variables
 
-Copy the example environment file:
+Create a `.env` file:
 
 ```bash
-cp env.example .env
+touch .env
 ```
 
-Example `.env`:
+Example local development env:
 
 ```env
-APP_PORT=8080
-
-DB_USER=cliq
-DB_PASS=secret
-DB_NAME=cliq_db
-DB_HOST=postgres
-DB_PORT=5432
-
-RDB_HOST=redis
-RDB_PORT=6379
-RDB_USER=
-RDB_PASS=
-
-JWT_SECRET=change_me_to_a_long_random_string
-JWT_ISSUER=cliq
+VITE_API_URL=http://localhost:8080
+VITE_SHORT_URL_BASE=http://localhost:8080
 ```
 
-For local development without Docker:
+Variables:
 
-```env
-DB_HOST=localhost
-RDB_HOST=localhost
-```
+| Variable | Description |
+| --- | --- |
+| `VITE_API_URL` | Base URL of the Cliq backend API |
+| `VITE_SHORT_URL_BASE` | Base URL used when displaying generated short links |
 
-Do not commit `.env` to Git.
+If the backend runs at `http://localhost:8080`, keep both values as `http://localhost:8080`.
 
 ---
 
-## Run with Docker
-
-From the project root:
-
-```bash
-docker compose up -d --build
-```
-
-This starts:
-
-* Go backend API
-* PostgreSQL
-* Redis
-* Migration service
-
-Check running containers:
-
-```bash
-docker ps
-```
-
-Stop containers:
-
-```bash
-docker compose down
-```
-
-Stop containers and remove volumes:
-
-```bash
-docker compose down -v
-```
-
----
-
-## Run Locally
+## Installation
 
 Install dependencies:
 
 ```bash
-go mod download
+npm install
 ```
 
-Make sure PostgreSQL and Redis are running.
-
-Run database migrations:
+Run the development server:
 
 ```bash
-make migrate-up
+npm run dev
 ```
 
-Run seed data if needed:
-
-```bash
-make seed
-```
-
-Start the backend:
-
-```bash
-go run .
-```
-
-If your entry point is inside `cmd`, use:
-
-```bash
-go run ./cmd
-```
-
-The backend runs at:
+Frontend URL:
 
 ```txt
-http://localhost:8080
+http://localhost:5173
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+Preview production build:
+
+```bash
+npm run preview
+```
+
+Run lint:
+
+```bash
+npm run lint
 ```
 
 ---
 
-## API Base URL
+## Available Scripts
 
-Direct backend access:
-
-```txt
-http://localhost:8080
-```
-
-Frontend access through Nginx proxy:
-
-```txt
-/api
-```
-
-Recommended frontend environment variable:
-
-```env
-VITE_API_BASE_URL=/api
-```
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start Vite development server |
+| `npm run build` | Build production assets |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint |
 
 ---
 
-## Authentication
-
-Protected endpoints require a Bearer token:
+## Routes
 
 ```txt
-Authorization: Bearer <token>
+/                            Landing page
+/auth/register               Register page
+/auth/login                  Login page
+/dashboard                   User dashboard
+/dashboard/create            Create short link page
+/dashboard/profile           Profile page
+/dashboard/links/:id/delete  Delete link action
+/logout                      Logout action
 ```
 
-Example:
+Route behavior:
 
-```bash
-curl "http://localhost:8080/profile" \
-  -H "Authorization: Bearer <token>"
-```
+- `/` uses `optionalAuthLoader`.
+- `/auth/register` and `/auth/login` use `guestOnlyLoader`.
+- `/dashboard/*` uses `requireAuthLoader`.
+- `/logout` calls the backend logout endpoint and redirects to login.
 
 ---
 
-## API Routes
+## Backend API Integration
 
-### Auth Routes
+All API requests go through `src/utils/api.js`.
 
-```txt
-POST /auth/register
-POST /auth/login
-POST /auth/reset
-POST /auth/reset/confirm
-POST /auth/change-password
-POST /auth/logout
+```js
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+export async function apiRequest(path, options = {}) {
+  return fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    ...options,
+  });
+}
 ```
 
-### Profile Routes
+The important part is:
 
-```txt
-GET   /profile
-GET   /profile/info
-PATCH /profile/edit
-PATCH /profile/change/password
+```js
+credentials: "include"
 ```
 
-### Redirect Route
+This allows the browser to send the backend's HttpOnly `access_token` cookie with requests.
+
+---
+
+## Authentication Flow
+
+The frontend does not store JWTs in `localStorage`.
+
+1. User submits the login form.
+2. `loginAction` sends credentials to `POST /auth/login`.
+3. The backend sets an HttpOnly `access_token` cookie.
+4. `getCurrentUser()` calls `GET /auth/me` with `credentials: "include"`.
+5. Protected routes use `requireAuthLoader`.
+6. Guest-only pages redirect authenticated users away from login/register.
+7. Logout calls `POST /auth/logout` and redirects to `/auth/login`.
+
+Because the cookie is HttpOnly, JavaScript cannot read it directly. That is expected and safer than storing tokens manually in browser storage.
+
+---
+
+## API Endpoints Used
+
+| Frontend Feature | Backend Endpoint |
+| --- | --- |
+| Register | `POST /auth/register` |
+| Login | `POST /auth/login` |
+| Current user | `GET /auth/me` |
+| Logout | `POST /auth/logout` |
+| Create short link | `POST /link/create` |
+| Dashboard links | `GET /link/dashboard?page=1&limit=10` |
+| Delete link | `DELETE /link/:id` |
+
+The public short link redirect is handled by the backend:
 
 ```txt
 GET /:slug
 ```
 
-The redirect route is used to open the original URL from a shortlink slug.
+---
 
-Example:
+## Slug Validation
+
+The frontend validates custom slugs before sending them to the backend.
+
+Rules:
+
+- Optional field
+- Must be 3-50 characters when provided
+- Can contain only letters, numbers, and hyphens
+- Spaces are converted to hyphens
+- Reserved slugs are blocked
+
+Reserved slugs:
 
 ```txt
-GET /github
+api, login, register, dashboard, auth, link, profile, swagger, img
 ```
 
-Redirects to the original link saved for the `github` slug.
+The backend should still validate slugs too. Frontend validation is for user experience, not security.
 
 ---
 
-## Shortlink Feature
+## CORS and Cookie Requirements
 
-Cliq allows authenticated users to create shortlinks.
+Because authentication uses cookies, the backend must allow the frontend origin.
 
-A shortlink usually contains:
-
-* original URL
-* custom slug
-* generated short URL
-* owner user ID
-* created date
-* updated date
-
-Example request:
-
-```bash
-curl -X POST "http://localhost:8080/cliq" \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "origin_link": "https://github.com/rivando-al-rasyid",
-    "slug": "github"
-  }'
-```
-
-Example response:
-
-```json
-{
-  "message": "shortlink created successfully",
-  "data": {
-    "slug": "github",
-    "short_url": "http://localhost:8080/github",
-    "origin_link": "https://github.com/rivando-al-rasyid"
-  },
-  "isSuccess": true
-}
-```
-
----
-
-## Database Migration
-
-Create a new migration:
-
-```bash
-make migrate-create NAME=users
-```
-
-Run migrations:
-
-```bash
-make migrate-up
-```
-
-Rollback migrations:
-
-```bash
-make migrate-down
-```
-
-Check migration version:
-
-```bash
-make migrate-status
-```
-
-Force migration version:
-
-```bash
-make migrate-force VERSION=1
-```
-
-Only force a migration version when you are sure about the current database state.
-
----
-
-## Seed Database
-
-Run seed:
-
-```bash
-make seed
-```
-
-Reset seed:
-
-```bash
-make seed-reset
-```
-
-The reset command truncates core tables and inserts seed data again.
-
-Use this carefully because it removes existing development data.
-
----
-
-## Swagger Documentation
-
-Swagger documentation is available at:
-
-```txt
-GET /swagger/index.html
-```
-
-Example:
-
-```txt
-http://localhost:8080/swagger/index.html
-```
-
----
-
-## Useful Make Commands
-
-```bash
-make migrate-create NAME=table_name
-make migrate-up
-make migrate-down
-make migrate-status
-make migrate-force VERSION=1
-make seed
-make seed-reset
-make print-db-url
-```
-
----
-
-## Recommended Development Flow
-
-Start services:
-
-```bash
-docker compose up -d --build
-```
-
-Check containers:
-
-```bash
-docker ps
-```
-
-Run migrations manually if needed:
-
-```bash
-make migrate-up
-```
-
-Run seed manually if needed:
-
-```bash
-make seed
-```
-
-Run tests:
-
-```bash
-go test ./...
-```
-
----
-
-## API Design Notes
-
-* `POST /cliq` is used to create a new shortlink.
-* `GET /:slug` is used to redirect users to the original URL.
-* Slugs should be unique.
-* Protected routes should require JWT authentication.
-* Public redirect routes should not require authentication.
-* Keep sensitive values inside `.env`.
-* Do not commit `.env` to Git.
-
----
-
-## Security Notice
-
-Cliq is a learning and portfolio project.
-
-Before production use, review at minimum:
-
-* Authentication and JWT security
-* Password hashing
-* Password reset token security
-* Slug validation
-* URL validation
-* Rate limiting
-* Abuse prevention
-* Redirect safety
-* Open redirect protection
-* Input validation
-* CORS policy
-* Logging and monitoring
-* Secret management
-* Backup and recovery
-
----
-
-## Common Issues
-
-### Database Connection Failed
-
-Check:
+Backend `.env` example:
 
 ```env
-DB_HOST
-DB_PORT
-DB_USER
-DB_PASS
-DB_NAME
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+COOKIE_SECURE=false
+COOKIE_SAMESITE=lax
 ```
 
-If using Docker:
+For local development, this is usually enough.
 
-```env
-DB_HOST=postgres
-```
+For production:
 
-If running locally:
-
-```env
-DB_HOST=localhost
-```
+- Use HTTPS.
+- Set `COOKIE_SECURE=true`.
+- Use a correct production frontend URL in `ALLOWED_ORIGINS`.
+- Use `COOKIE_SAMESITE=none` only if the frontend and backend are on different sites and cross-site cookies are required.
 
 ---
 
-### Redis Connection Failed
+## Development Notes
 
-Check:
-
-```env
-RDB_HOST
-RDB_PORT
-RDB_USER
-RDB_PASS
-```
-
-If using Docker:
-
-```env
-RDB_HOST=redis
-```
-
-If running locally:
-
-```env
-RDB_HOST=localhost
-```
-
----
-
-### Migration Dirty Error
-
-Check migration status:
-
-```bash
-make migrate-status
-```
-
-Force the correct version only if you are sure:
-
-```bash
-make migrate-force VERSION=1
-```
-
-Then run migration again:
-
-```bash
-make migrate-up
-```
+- Do not save the backend access token in `localStorage` or `sessionStorage`.
+- Keep `VITE_API_URL` pointed to the backend repo deployment.
+- Keep `VITE_SHORT_URL_BASE` pointed to the public backend domain used for redirects.
+- React Router actions are used for form submission instead of manually handling all submits with component state.
+- Loaders protect routes by calling `/auth/me`, not by checking a locally saved token.
 
 ---
 
 ## License
 
 This project is licensed under the MIT License.
-
-See the `LICENSE` file for details.
