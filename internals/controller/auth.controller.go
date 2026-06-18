@@ -21,15 +21,15 @@ func NewAuthController(authservice *service.AuthService) *AuthController {
 
 // Register godoc
 // @Summary      Register a new user
-// @Description  Creates a new user account along with a profile
+// @Description  Creates a new user account and its default profile.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
-// @Param        body  body      dto.RegisterRequest  true  "Registration credentials"
-// @Success      201   {object}  dto.Response
-// @Failure      400   {object}  dto.Response
-// @Failure      409   {object}  dto.Response
-// @Failure      500   {object}  dto.Response
+// @Param        body  body      dto.RegisterRequest  true  "Registration payload"
+// @Success      201   {object}  dto.Response{data=dto.UserResponse}  "User successfully registered"
+// @Failure      400   {object}  dto.Response                         "Invalid request payload"
+// @Failure      409   {object}  dto.Response                         "Email already exists"
+// @Failure      500   {object}  dto.Response                         "Internal server error"
 // @Router       /auth/register [post]
 func (a *AuthController) Register(ctx *gin.Context) {
 	var body dto.RegisterRequest
@@ -54,15 +54,16 @@ func (a *AuthController) Register(ctx *gin.Context) {
 }
 
 // Login godoc
-// @Summary      Login
+// @Summary      Login user
 // @Description  Verifies email and password, stores the access JWT in an HttpOnly cookie, and returns public user data.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
-// @Param        body  body      dto.LoginRequest  true  "Login credentials"
-// @Success      200   {object}  dto.Response
-// @Failure      400   {object}  dto.Response
-// @Failure      401   {object}  dto.Response
+// @Param        body  body      dto.LoginRequest  true  "Login payload"
+// @Success      200   {object}  dto.Response{data=dto.UserResponse}  "Login successful"
+// @Header       200   {string}  Set-Cookie                           "HttpOnly access token cookie"
+// @Failure      400   {object}  dto.Response                         "Invalid request payload"
+// @Failure      401   {object}  dto.Response                         "Invalid email or password"
 // @Router       /auth/login [post]
 func (a *AuthController) Login(ctx *gin.Context) {
 	var body dto.LoginRequest
@@ -86,13 +87,13 @@ func (a *AuthController) Login(ctx *gin.Context) {
 
 // Me godoc
 // @Summary      Get current authenticated user
-// @Description  Returns the active user identity from the verified access cookie/token.
+// @Description  Returns the active user identity from the verified access cookie or Bearer token.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {object}  dto.Response
-// @Failure      401  {object}  dto.Response
+// @Success      200  {object}  dto.Response{data=dto.UserResponse}  "Authenticated user retrieved"
+// @Failure      401  {object}  dto.Response                         "Unauthorized"
 // @Router       /auth/me [get]
 func (a *AuthController) Me(ctx *gin.Context) {
 	userID, ok := pkg.CurrentUserID(ctx)
@@ -114,15 +115,16 @@ func (a *AuthController) Me(ctx *gin.Context) {
 }
 
 // Logout godoc
-// @Summary      Logout
-// @Description  Revokes the current access token and clears the HttpOnly cookie.
+// @Summary      Logout user
+// @Description  Revokes the current access token and clears the HttpOnly access cookie.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {object}  dto.Response
-// @Failure      401  {object}  dto.Response
-// @Failure      500  {object}  dto.Response
+// @Success      200  {object}  dto.Response  "Logged out successfully"
+// @Header       200  {string}  Set-Cookie    "Cleared access token cookie"
+// @Failure      401  {object}  dto.Response  "Unauthorized"
+// @Failure      500  {object}  dto.Response  "Internal server error"
 // @Router       /auth/logout [post]
 func (a *AuthController) Logout(ctx *gin.Context) {
 	defer pkg.ClearAccessTokenCookie(ctx)
@@ -149,16 +151,16 @@ func (a *AuthController) Logout(ctx *gin.Context) {
 }
 
 // ResetPassword godoc
-// @Summary      Request a password reset token
+// @Summary      Request password reset token
 // @Description  Looks up the account by email and stores a short-lived PASSWORD_RESET token. Deliver this token to the user via email or SMS, then exchange it at POST /auth/reset/confirm.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Param        body  body      dto.ResetPasswordRequest  true  "Registered email address"
-// @Success      201   {object}  dto.Response
-// @Failure      400   {object}  dto.Response
-// @Failure      404   {object}  dto.Response
-// @Failure      500   {object}  dto.Response
+// @Success      201   {object}  dto.Response              "Reset token generated"
+// @Failure      400   {object}  dto.Response              "Invalid request payload"
+// @Failure      404   {object}  dto.Response              "Account not found"
+// @Failure      500   {object}  dto.Response              "Internal server error"
 // @Router       /auth/reset [post]
 func (a *AuthController) ResetPassword(ctx *gin.Context) {
 	var body dto.ResetPasswordRequest
@@ -179,16 +181,16 @@ func (a *AuthController) ResetPassword(ctx *gin.Context) {
 }
 
 // ConfirmResetPassword godoc
-// @Summary      Confirm reset token and obtain a password-reset JWT
-// @Description  Validates the opaque PASSWORD_RESET token issued by POST /auth/reset, revokes it (single-use), and returns a short-lived JWT (10 min, sub="password-reset"). Use this JWT as a Bearer token when calling POST /auth/change-password.
+// @Summary      Confirm password reset token
+// @Description  Validates the opaque PASSWORD_RESET token issued by POST /auth/reset, revokes it for single use, and returns a short-lived password-reset JWT.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
-// @Param        body  body      dto.ConfirmResetPassword  true  "Reset token (from email/SMS)"
-// @Success      200   {object}  dto.Response
-// @Failure      400   {object}  dto.Response
-// @Failure      401   {object}  dto.Response
-// @Failure      500   {object}  dto.Response
+// @Param        body  body      dto.ConfirmResetPassword  true  "Reset token payload"
+// @Success      200   {object}  dto.Response              "Reset token confirmed"
+// @Failure      400   {object}  dto.Response              "Invalid request payload"
+// @Failure      401   {object}  dto.Response              "Invalid or expired reset token"
+// @Failure      500   {object}  dto.Response              "Internal server error"
 // @Router       /auth/reset/confirm [post]
 func (a *AuthController) ConfirmResetPassword(ctx *gin.Context) {
 	var body dto.ConfirmResetPassword
@@ -214,17 +216,17 @@ func (a *AuthController) ConfirmResetPassword(ctx *gin.Context) {
 }
 
 // ChangePassword godoc
-// @Summary      Set a new password using a password-reset JWT
-// @Description  Replaces the user's password. Requires the short-lived JWT returned by POST /auth/reset/confirm as a Bearer token (sub must be "password-reset").
+// @Summary      Change password after reset confirmation
+// @Description  Replaces the user's password. Requires the short-lived JWT returned by POST /auth/reset/confirm as a Bearer token.
 // @Tags         Authentication
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body  body      dto.ChangeAndPasswordRequest  true  "New password"
-// @Success      200   {object}  dto.Response
-// @Failure      400   {object}  dto.Response
-// @Failure      401   {object}  dto.Response
-// @Failure      500   {object}  dto.Response
+// @Param        body  body      dto.ChangeAndPasswordRequest  true  "New password payload"
+// @Success      200   {object}  dto.Response                  "Password changed successfully"
+// @Failure      400   {object}  dto.Response                  "Invalid request payload"
+// @Failure      401   {object}  dto.Response                  "Unauthorized"
+// @Failure      500   {object}  dto.Response                  "Internal server error"
 // @Router       /auth/change-password [post]
 func (a *AuthController) ChangePassword(ctx *gin.Context) {
 	userID, ok := pkg.CurrentUserID(ctx)

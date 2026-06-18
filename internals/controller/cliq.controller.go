@@ -41,18 +41,18 @@ func shortLinkBase(ctx *gin.Context) string {
 }
 
 // CreateSlug godoc
-// @Summary      Create a new short link
-// @Description  Creates a shortened URL. If slug is empty, the system generates a random unique slug.
-// @Tags         cliq
+// @Summary      Create short link
+// @Description  Creates a short link for the authenticated user. If the slug is empty, the service generates a random unique slug.
+// @Tags         Links
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body           body      dto.Link  true  "Slug Creation Payload"
-// @Success      201            {object}  dto.Response "Short link created successfully"
-// @Failure      400            {object}  dto.Response "Invalid request payload"
-// @Failure      401            {object}  dto.Response "Unauthorized / Invalid token"
-// @Failure      409            {object}  dto.Response "Slug already exists"
-// @Failure      500            {object}  dto.Response "Internal server error"
+// @Param        body  body      dto.Link      true  "Short link payload"
+// @Success      201   {object}  dto.Response  "Short link created successfully"
+// @Failure      400   {object}  dto.Response  "Invalid origin link, slug, or reserved slug"
+// @Failure      401   {object}  dto.Response  "Unauthorized"
+// @Failure      409   {object}  dto.Response  "Slug already exists"
+// @Failure      500   {object}  dto.Response  "Internal server error"
 // @Router       /link/create [post]
 func (c *CliqController) CreateSlug(ctx *gin.Context) {
 	userID, ok := pkg.CurrentUserID(ctx)
@@ -99,17 +99,17 @@ func (c *CliqController) CreateSlug(ctx *gin.Context) {
 }
 
 // GetDashboard godoc
-// @Summary      Get authenticated user's link dashboard
-// @Description  Returns paginated active links and dashboard totals for the authenticated user.
-// @Tags         cliq
+// @Summary      Get link dashboard
+// @Description  Returns dashboard totals and paginated active links for the authenticated user.
+// @Tags         Links
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        page   query     int  false  "Page number"
-// @Param        limit  query     int  false  "Items per page"
-// @Success      200    {object}  dto.Response{data=dto.DashboardResponse}
-// @Failure      401    {object}  dto.Response "Unauthorized / Invalid token"
-// @Failure      500    {object}  dto.Response "Internal server error"
+// @Param        page   query     int  false  "Page number"     default(1)   minimum(1)
+// @Param        limit  query     int  false  "Items per page"  default(10)  minimum(1)
+// @Success      200    {object}  dto.Response{data=dto.DashboardResponse}  "Dashboard successfully retrieved"
+// @Failure      401    {object}  dto.Response                            "Unauthorized"
+// @Failure      500    {object}  dto.Response                            "Internal server error"
 // @Router       /link/dashboard [get]
 func (c *CliqController) GetDashboard(ctx *gin.Context) {
 	userID, ok := pkg.CurrentUserID(ctx)
@@ -132,18 +132,18 @@ func (c *CliqController) GetDashboard(ctx *gin.Context) {
 }
 
 // DeleteLink godoc
-// @Summary      Soft delete authenticated user's link
-// @Description  Soft deletes a link owned by the authenticated user.
-// @Tags         cliq
+// @Summary      Delete short link
+// @Description  Soft deletes a short link owned by the authenticated user.
+// @Tags         Links
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      string  true  "Link ID"
-// @Success      200  {object}  dto.Response "Link deleted successfully"
-// @Failure      400  {object}  dto.Response "Invalid link id"
-// @Failure      401  {object}  dto.Response "Unauthorized / Invalid token"
-// @Failure      404  {object}  dto.Response "Link not found"
-// @Failure      500  {object}  dto.Response "Internal server error"
+// @Param        id   path      string        true  "Link ID"
+// @Success      200  {object}  dto.Response  "Link deleted successfully"
+// @Failure      400  {object}  dto.Response  "Invalid link id"
+// @Failure      401  {object}  dto.Response  "Unauthorized"
+// @Failure      404  {object}  dto.Response  "Link not found"
+// @Failure      500  {object}  dto.Response  "Internal server error"
 // @Router       /link/{id} [delete]
 func (c *CliqController) DeleteLink(ctx *gin.Context) {
 	userID, ok := pkg.CurrentUserID(ctx)
@@ -170,14 +170,13 @@ func (c *CliqController) DeleteLink(ctx *gin.Context) {
 }
 
 // RedirectBySlug godoc
-// @Summary      Redirect short link
-// @Description  Permanently redirects to the original URL based on the provided slug.
-// @Tags         cliq
-// @Produce      json
-// @Param        slug  path      string  true  "Short link slug"
-// @Success      301   {string}  string  "Redirects to original URL"
-// @Failure      404   {object}  dto.Response "Slug not found"
-// @Failure      500   {object}  dto.Response "Internal server error"
+// @Summary      Redirect by slug
+// @Description  Redirects to the original URL for the provided short link slug.
+// @Tags         Links
+// @Param        slug  path      string        true  "Short link slug"
+// @Success      301   {string}  string        "Redirects to original URL"
+// @Failure      404   {object}  dto.Response  "Slug not found"
+// @Failure      500   {object}  dto.Response  "Internal server error"
 // @Router       /{slug} [get]
 func (c *CliqController) RedirectBySlug(ctx *gin.Context) {
 	slug := ctx.Param("slug")

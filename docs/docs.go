@@ -25,7 +25,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replaces the user's password. Requires the short-lived JWT returned by POST /auth/reset/confirm as a Bearer token (sub must be \"password-reset\").",
+                "description": "Replaces the user's password. Requires the short-lived JWT returned by POST /auth/reset/confirm as a Bearer token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,10 +35,10 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Set a new password using a password-reset JWT",
+                "summary": "Change password after reset confirmation",
                 "parameters": [
                     {
-                        "description": "New password",
+                        "description": "New password payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -49,13 +49,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Password changed successfully",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -67,7 +67,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -77,7 +77,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Verifies email and password, then issues a signed JWT access token.",
+                "description": "Verifies email and password, stores the access JWT in an HttpOnly cookie, and returns public user data.",
                 "consumes": [
                     "application/json"
                 ],
@@ -87,10 +87,10 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Login",
+                "summary": "Login user",
                 "parameters": [
                     {
-                        "description": "Login credentials",
+                        "description": "Login payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -101,19 +101,37 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Login successful",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "HttpOnly access token cookie"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid email or password",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -128,7 +146,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Revokes the current access token, invalidating the session.",
+                "description": "Revokes the current access token and clears the HttpOnly access cookie.",
                 "consumes": [
                     "application/json"
                 ],
@@ -138,12 +156,18 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Logout",
+                "summary": "Logout user",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Logged out successfully",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "Cleared access token cookie"
+                            }
                         }
                     },
                     "401": {
@@ -153,7 +177,53 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the active user identity from the verified access cookie or Bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get current authenticated user",
+                "responses": {
+                    "200": {
+                        "description": "Authenticated user retrieved",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -163,7 +233,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Creates a new user account along with a profile",
+                "description": "Creates a new user account and its default profile.",
                 "consumes": [
                     "application/json"
                 ],
@@ -176,7 +246,7 @@ const docTemplate = `{
                 "summary": "Register a new user",
                 "parameters": [
                     {
-                        "description": "Registration credentials",
+                        "description": "Registration payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -187,25 +257,37 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "User successfully registered",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "409": {
-                        "description": "Conflict",
+                        "description": "Email already exists",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -215,7 +297,7 @@ const docTemplate = `{
         },
         "/auth/reset": {
             "post": {
-                "description": "Looks up the account by email and stores a short-lived PASSWORD_RESET token (5 min). Deliver this token to the user via email or SMS, then exchange it at POST /auth/reset/confirm.",
+                "description": "Looks up the account by email and stores a short-lived PASSWORD_RESET token. Deliver this token to the user via email or SMS, then exchange it at POST /auth/reset/confirm.",
                 "consumes": [
                     "application/json"
                 ],
@@ -225,7 +307,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Request a password reset token",
+                "summary": "Request password reset token",
                 "parameters": [
                     {
                         "description": "Registered email address",
@@ -239,25 +321,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Reset token generated",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Account not found",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -267,7 +349,7 @@ const docTemplate = `{
         },
         "/auth/reset/confirm": {
             "post": {
-                "description": "Validates the opaque PASSWORD_RESET token issued by POST /auth/reset, revokes it (single-use), and returns a short-lived JWT (10 min, sub=\"password-reset\"). Use this JWT as a Bearer token when calling POST /auth/change-password.",
+                "description": "Validates the opaque PASSWORD_RESET token issued by POST /auth/reset, revokes it for single use, and returns a short-lived password-reset JWT.",
                 "consumes": [
                     "application/json"
                 ],
@@ -277,10 +359,10 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Confirm reset token and obtain a password-reset JWT",
+                "summary": "Confirm password reset token",
                 "parameters": [
                     {
-                        "description": "Reset token (from email/SMS)",
+                        "description": "Reset token payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -291,25 +373,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Reset token confirmed",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid or expired reset token",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -324,7 +406,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Generates a shortened URL slug for an authenticated user.",
+                "description": "Creates a short link for the authenticated user. If the slug is empty, the service generates a random unique slug.",
                 "consumes": [
                     "application/json"
                 ],
@@ -332,12 +414,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "cliq"
+                    "Links"
                 ],
-                "summary": "Create a new slug",
+                "summary": "Create short link",
                 "parameters": [
                     {
-                        "description": "Slug Creation Payload",
+                        "description": "Short link payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -348,19 +430,156 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Slug created successfully",
+                        "description": "Short link created successfully",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Invalid request payload",
+                        "description": "Invalid origin link, slug, or reserved slug",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized / Invalid token",
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Slug already exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/link/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns dashboard totals and paginated active links for the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Links"
+                ],
+                "summary": "Get link dashboard",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dashboard successfully retrieved",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DashboardResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/link/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft deletes a short link owned by the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Links"
+                ],
+                "summary": "Delete short link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Link ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Link deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid link id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Link not found",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -381,7 +600,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves current authentication details' full name, telephone connection code, and user avatar endpoint.",
+                "description": "Retrieves the current user's profile, including full name, phone number, and photo URL.",
                 "consumes": [
                     "application/json"
                 ],
@@ -391,10 +610,10 @@ const docTemplate = `{
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Get user profile details",
+                "summary": "Get profile",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Profile successfully retrieved",
                         "schema": {
                             "allOf": [
                                 {
@@ -418,13 +637,13 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Profile not found",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -439,7 +658,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates system details including full name text, phone data info, and multipart image form attachments.",
+                "description": "Updates the current user's profile. Accepts optional full_name, phone, and photo multipart fields.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -449,48 +668,36 @@ const docTemplate = `{
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Modify active user profile records",
+                "summary": "Update profile",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Updated full identity name representation",
+                        "description": "Full name",
                         "name": "full_name",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Target telecommunications contact identity sequence",
+                        "description": "Phone number",
                         "name": "phone",
                         "in": "formData"
                     },
                     {
                         "type": "file",
-                        "description": "Binary source file image attachment content",
+                        "description": "Profile photo file (.jpg, .jpeg, .png, .webp, max 2MB)",
                         "name": "photo",
                         "in": "formData"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Profile successfully updated",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -502,13 +709,13 @@ const docTemplate = `{
                         }
                     },
                     "422": {
-                        "description": "Unprocessable Entity",
+                        "description": "Invalid file type or file too large",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -523,7 +730,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Assembles structured systemic components including identities, security states, and financial metrics.",
+                "description": "Returns the authenticated user's account identity and profile summary.",
                 "consumes": [
                     "application/json"
                 ],
@@ -533,10 +740,10 @@ const docTemplate = `{
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Get unified system user statistics context",
+                "summary": "Get user info",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "User info successfully retrieved",
                         "schema": {
                             "allOf": [
                                 {
@@ -560,7 +767,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -575,7 +782,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Modifies internal account validation strings. Requires old confirmation verification strings.",
+                "description": "Changes the current user's password after validating the old password.",
                 "consumes": [
                     "application/json"
                 ],
@@ -585,10 +792,10 @@ const docTemplate = `{
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Modify security entry password credentials",
+                "summary": "Update profile password",
                 "parameters": [
                     {
-                        "description": "Password structure swap payload",
+                        "description": "Password change payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -599,37 +806,63 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Password successfully updated",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Unauthorized or old password is incorrect",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/{slug}": {
+            "get": {
+                "description": "Redirects to the original URL for the provided short link slug.",
+                "tags": [
+                    "Links"
+                ],
+                "summary": "Redirect by slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Short link slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "301": {
+                        "description": "Redirects to original URL",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Slug not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
@@ -680,6 +913,32 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.DashboardResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LinkResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total_active": {
+                    "type": "integer"
+                },
+                "total_clicks": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.Link": {
             "type": "object",
             "required": [
@@ -687,6 +946,31 @@ const docTemplate = `{
             ],
             "properties": {
                 "origin_link": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3
+                }
+            }
+        },
+        "dto.LinkResponse": {
+            "type": "object",
+            "properties": {
+                "clicks": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "origin_link": {
+                    "type": "string"
+                },
+                "short_url": {
                     "type": "string"
                 },
                 "slug": {
@@ -789,6 +1073,17 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "dto.UserResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {
@@ -807,8 +1102,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Vanwallet",
-	Description:      "Backend Vanwallet  using Gin",
+	Title:            "Cliq",
+	Description:      "Backend Cliq  using Gin",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

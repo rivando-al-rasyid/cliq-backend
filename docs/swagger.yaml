@@ -28,14 +28,48 @@ definitions:
     required:
     - token
     type: object
+  dto.DashboardResponse:
+    properties:
+      limit:
+        type: integer
+      links:
+        items:
+          $ref: '#/definitions/dto.LinkResponse'
+        type: array
+      page:
+        type: integer
+      total_active:
+        type: integer
+      total_clicks:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   dto.Link:
     properties:
       origin_link:
         type: string
       slug:
+        maxLength: 50
+        minLength: 3
         type: string
     required:
     - origin_link
+    type: object
+  dto.LinkResponse:
+    properties:
+      clicks:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      origin_link:
+        type: string
+      short_url:
+        type: string
+      slug:
+        type: string
     type: object
   dto.LoginRequest:
     properties:
@@ -102,23 +136,55 @@ definitions:
       photo:
         type: string
     type: object
+  dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
-  description: Backend Vanwallet  using Gin
+  description: Backend Cliq  using Gin
   license:
     name: MIT
-  title: Vanwallet
+  title: Cliq
   version: "1.0"
 paths:
+  /{slug}:
+    get:
+      description: Redirects to the original URL for the provided short link slug.
+      parameters:
+      - description: Short link slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      responses:
+        "301":
+          description: Redirects to original URL
+          schema:
+            type: string
+        "404":
+          description: Slug not found
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Redirect by slug
+      tags:
+      - Links
   /auth/change-password:
     post:
       consumes:
       - application/json
       description: Replaces the user's password. Requires the short-lived JWT returned
-        by POST /auth/reset/confirm as a Bearer token (sub must be "password-reset").
+        by POST /auth/reset/confirm as a Bearer token.
       parameters:
-      - description: New password
+      - description: New password payload
         in: body
         name: body
         required: true
@@ -128,11 +194,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Password changed successfully
           schema:
             $ref: '#/definitions/dto.Response'
         "400":
-          description: Bad Request
+          description: Invalid request payload
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
@@ -140,21 +206,22 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Set a new password using a password-reset JWT
+      summary: Change password after reset confirmation
       tags:
       - Authentication
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Verifies email and password, then issues a signed JWT access token.
+      description: Verifies email and password, stores the access JWT in an HttpOnly
+        cookie, and returns public user data.
       parameters:
-      - description: Login credentials
+      - description: Login payload
         in: body
         name: body
         required: true
@@ -164,30 +231,44 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: HttpOnly access token cookie
+              type: string
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
         "400":
-          description: Bad Request
+          description: Invalid request payload
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
-          description: Unauthorized
+          description: Invalid email or password
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: Login
+      summary: Login user
       tags:
       - Authentication
   /auth/logout:
     post:
       consumes:
       - application/json
-      description: Revokes the current access token, invalidating the session.
+      description: Revokes the current access token and clears the HttpOnly access
+        cookie.
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Logged out successfully
+          headers:
+            Set-Cookie:
+              description: Cleared access token cookie
+              type: string
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
@@ -195,21 +276,48 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Logout
+      summary: Logout user
+      tags:
+      - Authentication
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Returns the active user identity from the verified access cookie
+        or Bearer token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Authenticated user retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current authenticated user
       tags:
       - Authentication
   /auth/register:
     post:
       consumes:
       - application/json
-      description: Creates a new user account along with a profile
+      description: Creates a new user account and its default profile.
       parameters:
-      - description: Registration credentials
+      - description: Registration payload
         in: body
         name: body
         required: true
@@ -219,19 +327,24 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: User successfully registered
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
         "400":
-          description: Bad Request
+          description: Invalid request payload
           schema:
             $ref: '#/definitions/dto.Response'
         "409":
-          description: Conflict
+          description: Email already exists
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       summary: Register a new user
@@ -242,8 +355,8 @@ paths:
       consumes:
       - application/json
       description: Looks up the account by email and stores a short-lived PASSWORD_RESET
-        token (5 min). Deliver this token to the user via email or SMS, then exchange
-        it at POST /auth/reset/confirm.
+        token. Deliver this token to the user via email or SMS, then exchange it at
+        POST /auth/reset/confirm.
       parameters:
       - description: Registered email address
         in: body
@@ -255,22 +368,22 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: Reset token generated
           schema:
             $ref: '#/definitions/dto.Response'
         "400":
-          description: Bad Request
+          description: Invalid request payload
           schema:
             $ref: '#/definitions/dto.Response'
         "404":
-          description: Not Found
+          description: Account not found
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: Request a password reset token
+      summary: Request password reset token
       tags:
       - Authentication
   /auth/reset/confirm:
@@ -278,10 +391,9 @@ paths:
       consumes:
       - application/json
       description: Validates the opaque PASSWORD_RESET token issued by POST /auth/reset,
-        revokes it (single-use), and returns a short-lived JWT (10 min, sub="password-reset").
-        Use this JWT as a Bearer token when calling POST /auth/change-password.
+        revokes it for single use, and returns a short-lived password-reset JWT.
       parameters:
-      - description: Reset token (from email/SMS)
+      - description: Reset token payload
         in: body
         name: body
         required: true
@@ -291,31 +403,71 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Reset token confirmed
           schema:
             $ref: '#/definitions/dto.Response'
         "400":
-          description: Bad Request
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Invalid or expired reset token
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Confirm password reset token
+      tags:
+      - Authentication
+  /link/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft deletes a short link owned by the authenticated user.
+      parameters:
+      - description: Link ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Link deleted successfully
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Invalid link id
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/dto.Response'
-        "500":
-          description: Internal Server Error
+        "404":
+          description: Link not found
           schema:
             $ref: '#/definitions/dto.Response'
-      summary: Confirm reset token and obtain a password-reset JWT
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete short link
       tags:
-      - Authentication
+      - Links
   /link/create:
     post:
       consumes:
       - application/json
-      description: Generates a shortened URL slug for an authenticated user.
+      description: Creates a short link for the authenticated user. If the slug is
+        empty, the service generates a random unique slug.
       parameters:
-      - description: Slug Creation Payload
+      - description: Short link payload
         in: body
         name: body
         required: true
@@ -325,15 +477,19 @@ paths:
       - application/json
       responses:
         "201":
-          description: Slug created successfully
+          description: Short link created successfully
           schema:
             $ref: '#/definitions/dto.Response'
         "400":
-          description: Invalid request payload
+          description: Invalid origin link, slug, or reserved slug
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
-          description: Unauthorized / Invalid token
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "409":
+          description: Slug already exists
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
@@ -342,20 +498,64 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Create a new slug
+      summary: Create short link
       tags:
-      - cliq
-  /profile:
+      - Links
+  /link/dashboard:
     get:
       consumes:
       - application/json
-      description: Retrieves current authentication details' full name, telephone
-        connection code, and user avatar endpoint.
+      description: Returns dashboard totals and paginated active links for the authenticated
+        user.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        minimum: 1
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Dashboard successfully retrieved
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get link dashboard
+      tags:
+      - Links
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current user's profile, including full name, phone
+        number, and photo URL.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile successfully retrieved
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -368,34 +568,34 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
         "404":
-          description: Not Found
+          description: Profile not found
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Get user profile details
+      summary: Get profile
       tags:
       - Profile
   /profile/edit:
     patch:
       consumes:
       - multipart/form-data
-      description: Updates system details including full name text, phone data info,
-        and multipart image form attachments.
+      description: Updates the current user's profile. Accepts optional full_name,
+        phone, and photo multipart fields.
       parameters:
-      - description: Updated full identity name representation
+      - description: Full name
         in: formData
         name: full_name
         type: string
-      - description: Target telecommunications contact identity sequence
+      - description: Phone number
         in: formData
         name: phone
         type: string
-      - description: Binary source file image attachment content
+      - description: Profile photo file (.jpg, .jpeg, .png, .webp, max 2MB)
         in: formData
         name: photo
         type: file
@@ -403,16 +603,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Profile successfully updated
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: object
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
-          description: Bad Request
+          description: Invalid request body
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
@@ -420,29 +615,28 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
         "422":
-          description: Unprocessable Entity
+          description: Invalid file type or file too large
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Modify active user profile records
+      summary: Update profile
       tags:
       - Profile
   /profile/info:
     get:
       consumes:
       - application/json
-      description: Assembles structured systemic components including identities,
-        security states, and financial metrics.
+      description: Returns the authenticated user's account identity and profile summary.
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: User info successfully retrieved
           schema:
             allOf:
             - $ref: '#/definitions/dto.Response'
@@ -455,22 +649,21 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Get unified system user statistics context
+      summary: Get user info
       tags:
       - Profile
   /profile/password:
     patch:
       consumes:
       - application/json
-      description: Modifies internal account validation strings. Requires old confirmation
-        verification strings.
+      description: Changes the current user's password after validating the old password.
       parameters:
-      - description: Password structure swap payload
+      - description: Password change payload
         in: body
         name: body
         required: true
@@ -480,29 +673,24 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Password successfully updated
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  type: object
-              type: object
+            $ref: '#/definitions/dto.Response'
         "400":
-          description: Bad Request
+          description: Invalid request body
           schema:
             $ref: '#/definitions/dto.Response'
         "401":
-          description: Unauthorized
+          description: Unauthorized or old password is incorrect
           schema:
             $ref: '#/definitions/dto.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
-      summary: Modify security entry password credentials
+      summary: Update profile password
       tags:
       - Profile
 securityDefinitions:

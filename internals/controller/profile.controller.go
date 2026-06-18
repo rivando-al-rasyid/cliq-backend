@@ -28,16 +28,16 @@ func NewProfileController(profileservice *service.ProfileService) *ProfileContro
 }
 
 // GetProfile godoc
-// @Summary      Get user profile details
-// @Description  Retrieves current authentication details' full name, telephone connection code, and user avatar endpoint.
+// @Summary      Get profile
+// @Description  Retrieves the current user's profile, including full name, phone number, and photo URL.
 // @Tags         Profile
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200            {object}  dto.Response{data=dto.ProfileResponse}
-// @Failure      401            {object}  dto.Response{error}
-// @Failure      404            {object}  dto.Response{error}
-// @Failure      500            {object}  dto.Response{error}
+// @Success      200  {object}  dto.Response{data=dto.ProfileResponse}  "Profile successfully retrieved"
+// @Failure      401  {object}  dto.Response                            "Unauthorized"
+// @Failure      404  {object}  dto.Response                            "Profile not found"
+// @Failure      500  {object}  dto.Response                            "Internal server error"
 // @Router       /profile [get]
 func (p *ProfileController) GetProfile(ctx *gin.Context) {
 	email, ok := pkg.CurrentUserEmail(ctx)
@@ -81,21 +81,21 @@ func (p *ProfileController) validateAndSavePhoto(ctx *gin.Context, photo *multip
 }
 
 // EditProfile godoc
-// @Summary      Modify active user profile records
-// @Description  Updates system details including full name text, phone data info, and multipart image form attachments.
+// @Summary      Update profile
+// @Description  Updates the current user's profile. Accepts optional full_name, phone, and photo multipart fields.
 // @Tags         Profile
 // @Accept       multipart/form-data
 // @Produce      json
 // @Security     BearerAuth
-// @Param        full_name      formData  string  false "Updated full identity name representation"
-// @Param        phone          formData  string  false "Target telecommunications contact identity sequence"
-// @Param        photo          formData  file    false "Binary source file image attachment content"
-// @Success      200            {object}  dto.Response{data=object}
-// @Failure      400            {object}  dto.Response{error}
-// @Failure      401            {object}  dto.Response{error}
-// @Failure      422            {object}  dto.Response{error}
-// @Failure      500            {object}  dto.Response{error}
-// @Router       /profile/edit [PATCH]
+// @Param        full_name  formData  string  false  "Full name"
+// @Param        phone      formData  string  false  "Phone number"
+// @Param        photo      formData  file    false  "Profile photo file (.jpg, .jpeg, .png, .webp, max 2MB)"
+// @Success      200        {object}  dto.Response  "Profile successfully updated"
+// @Failure      400        {object}  dto.Response  "Invalid request body"
+// @Failure      401        {object}  dto.Response  "Unauthorized"
+// @Failure      422        {object}  dto.Response  "Invalid file type or file too large"
+// @Failure      500        {object}  dto.Response  "Internal server error"
+// @Router       /profile/edit [patch]
 func (p *ProfileController) EditProfile(ctx *gin.Context) {
 	email, ok := pkg.CurrentUserEmail(ctx)
 	if !ok {
@@ -146,18 +146,18 @@ func (p *ProfileController) EditProfile(ctx *gin.Context) {
 }
 
 // EditPassword godoc
-// @Summary      Modify security entry password credentials
-// @Description  Modifies internal account validation strings. Requires old confirmation verification strings.
+// @Summary      Update profile password
+// @Description  Changes the current user's password after validating the old password.
 // @Tags         Profile
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        body           body      dto.ChangePasswordRequest  true  "Password structure swap payload"
-// @Success      200            {object}  dto.Response{data=object}
-// @Failure      400            {object}  dto.Response{error}
-// @Failure      401            {object}  dto.Response{error}
-// @Failure      500            {object}  dto.Response{error}
-// @Router       /profile/password [PATCH]
+// @Param        body  body      dto.ChangePasswordRequest  true  "Password change payload"
+// @Success      200   {object}  dto.Response               "Password successfully updated"
+// @Failure      400   {object}  dto.Response               "Invalid request body"
+// @Failure      401   {object}  dto.Response               "Unauthorized or old password is incorrect"
+// @Failure      500   {object}  dto.Response               "Internal server error"
+// @Router       /profile/password [patch]
 func (p *ProfileController) EditPassword(ctx *gin.Context) {
 	email, ok := pkg.CurrentUserEmail(ctx)
 	if !ok {
@@ -185,15 +185,15 @@ func (p *ProfileController) EditPassword(ctx *gin.Context) {
 }
 
 // GetUserInfo godoc
-// @Summary      Get unified system user statistics context
-// @Description  Assembles structured systemic components including identities, security states, and financial metrics.
+// @Summary      Get user info
+// @Description  Returns the authenticated user's account identity and profile summary.
 // @Tags         Profile
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200            {object}  dto.Response{data=dto.UserInfoResponse}
-// @Failure      401            {object}  dto.Response{error}
-// @Failure      500            {object}  dto.Response{error}
+// @Success      200  {object}  dto.Response{data=dto.UserInfoResponse}  "User info successfully retrieved"
+// @Failure      401  {object}  dto.Response                             "Unauthorized"
+// @Failure      500  {object}  dto.Response                             "Internal server error"
 // @Router       /profile/info [get]
 func (p *ProfileController) GetUserInfo(ctx *gin.Context) {
 	email, ok := pkg.CurrentUserEmail(ctx)
