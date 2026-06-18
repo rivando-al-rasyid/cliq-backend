@@ -1,307 +1,475 @@
-# Cliq Frontend
+# Cliq Backend
 
-Cliq Frontend is the React client for the Cliq short link application. It lets users register, log in, create short links, manage dashboard links, copy short URLs, and access protected pages using the backend's HttpOnly cookie authentication flow.
+Cliq Backend is a REST API for a short link application. It handles user authentication, HttpOnly cookie sessions, profile management, password reset, short link creation, dashboard data, soft delete, and public slug redirection.
 
-> This repository contains only the frontend application. The Go backend should live in a separate repository and be configured through environment variables.
+> This repository contains only the backend API. The React frontend should live in a separate repository and connect through `VITE_API_URL`.
 
 ---
 
 ## Features
 
-- Landing page with short link form
-- Register and login pages
-- React Router data-mode loaders and actions
-- Guest-only auth routes
-- Protected dashboard routes
-- Cookie-based authentication through backend HttpOnly cookie
-- No JWT storage in `localStorage`
-- Dashboard link list with pagination data
-- Create short link page
-- Custom slug validation
+- User registration and login
+- JWT authentication with HttpOnly `access_token` cookie
+- Bearer token support for API testing tools
+- Current user endpoint
+- Logout with token revocation and cookie clearing
+- Password reset token flow
+- Profile info and profile editing
+- Avatar upload support
+- Create short links with optional custom slug
 - Reserved slug validation
-- Delete link action
-- Profile page
-- SweetAlert2 feedback
-- Tailwind CSS and daisyUI styling
-- Lucide icons
+- Dashboard links with pagination
+- Soft delete links
+- Public short link redirect by slug
+- PostgreSQL migrations
+- Redis connection support
+- Swagger API documentation
+- Docker Compose setup with PostgreSQL, Redis, pgAdmin, and migration service
 
 ---
 
 ## Tech Stack
 
-- React `19`
-- Vite `8`
-- React Router `8`
-- Tailwind CSS `4`
-- daisyUI `5`
-- SweetAlert2
-- Lucide React
-- react-qr-code
-- ESLint
+- Go `1.26.3`
+- Gin
+- PostgreSQL `17`
+- Redis `7`
+- pgx
+- JWT
+- HttpOnly cookies
+- golang-migrate `v4.18.3`
+- Swagger
+- Docker and Docker Compose
 
 ---
 
 ## Project Structure
 
 ```txt
-cliq-frontend/
+cliq-backend/
+├── cmd/
+│   └── main.go
+├── database/
+│   └── migrations/
+├── docs/
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── internals/
+│   ├── cache/
+│   ├── config/
+│   ├── controller/
+│   ├── dto/
+│   ├── middleware/
+│   ├── model/
+│   ├── pkg/
+│   ├── repository/
+│   ├── router/
+│   └── service/
 ├── public/
-│   ├── favicon.svg
-│   └── icons.svg
-├── src/
-│   ├── assets/
-│   ├── components/
-│   │   ├── LinkCard.jsx
-│   │   ├── footer.jsx
-│   │   └── header.jsx
-│   ├── layouts/
-│   │   ├── AppLayout.jsx
-│   │   └── AuthLayout.jsx
-│   ├── pages/
-│   │   ├── CreateLinkPage.jsx
-│   │   ├── DashboardPage.jsx
-│   │   ├── LandingPage.jsx
-│   │   ├── LoginPage.jsx
-│   │   ├── ProfilePage.jsx
-│   │   └── RegisterPage.jsx
-│   ├── utils/
-│   │   ├── api.js
-│   │   ├── auth.action.js
-│   │   ├── auth.js
-│   │   ├── link.action.js
-│   │   ├── link.loader.js
-│   │   └── sweetAlert.js
-│   ├── index.css
-│   └── main.jsx
-├── eslint.config.js
-├── index.html
-├── package.json
-├── package-lock.json
-└── vite.config.js
+│   └── img/
+├── Dockerfile
+├── docker-compose.yml
+├── env.example
+├── go.mod
+├── go.sum
+└── Makefile
 ```
 
 ---
 
 ## Requirements
 
-- Node.js
-- npm
-- Running Cliq backend API
+For Docker development:
+
+- Docker
+- Docker Compose
+- Make
+
+For local development without Docker:
+
+- Go `1.26.3`
+- PostgreSQL
+- Redis
+- golang-migrate
+- Make
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file:
+Copy the example file:
 
 ```bash
-touch .env
+cp env.example .env
 ```
 
-Example local development env:
+Example `.env` for Docker development:
+
+```env
+# App
+APP_NAME=Cliq
+APP_ENV=development
+APP_PORT=8080
+
+# Database
+DB_USER=cliq
+DB_PASS=cliq_password
+DB_NAME=cliq_db
+DB_HOST=postgres
+DB_PORT=5432
+
+# JWT
+JWT_ISSUER=cliq
+JWT_SECRET=change_this_to_a_long_random_secret
+JWT_EXPIRED=15m
+
+# Redis
+RDB_ADDR=redis:6379
+RDB_USER=
+RDB_PASS=
+
+# Cookie and CORS
+COOKIE_SECURE=false
+COOKIE_SAMESITE=lax
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Short link response base URL
+SHORT_LINK_BASE_URL=http://localhost:8080
+```
+
+For local development without Docker services, change these values:
+
+```env
+DB_HOST=localhost
+RDB_ADDR=localhost:6379
+```
+
+Important notes:
+
+- Keep `.env` out of Git.
+- Use a long random value for `JWT_SECRET`.
+- The current server starts on `0.0.0.0:8080` in `cmd/main.go`. `APP_PORT` exists in the env file, but the current code does not read it yet.
+- For cross-origin frontend requests, keep `ALLOWED_ORIGINS` in sync with the frontend URL.
+
+---
+
+## Run with Docker
+
+Start the backend stack:
+
+```bash
+docker compose up -d --build
+```
+
+Run migrations:
+
+```bash
+make migrate-up
+```
+
+Backend API:
+
+```txt
+http://localhost:8080
+```
+
+Swagger documentation:
+
+```txt
+http://localhost:8080/swagger/index.html
+```
+
+pgAdmin:
+
+```txt
+http://localhost
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Stop containers and remove volumes:
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Run Locally
+
+Install dependencies:
+
+```bash
+go mod download
+```
+
+Make sure PostgreSQL and Redis are running, then run migrations:
+
+```bash
+make migrate-up
+```
+
+Start the API:
+
+```bash
+go run ./cmd
+```
+
+The API runs at:
+
+```txt
+http://localhost:8080
+```
+
+---
+
+## Migration Commands
+
+```bash
+# create a new migration
+make migrate-create NAME=example
+
+# run all pending migrations
+make migrate-up
+
+# rollback migrations
+make migrate-down
+
+# force migration version
+make migrate-force VERSION=1
+
+# show current migration version
+make migrate-status
+```
+
+The migration service uses the `migrate/migrate:v4.18.3` Docker image from `docker-compose.yml`.
+
+---
+
+## Authentication
+
+Cliq uses a short-lived JWT access token.
+
+For browser clients:
+
+1. The client sends credentials to `POST /auth/login`.
+2. The API validates the user.
+3. The API sets an HttpOnly cookie named `access_token`.
+4. The browser sends the cookie automatically when the frontend uses `credentials: "include"`.
+5. Protected middleware reads the cookie and validates the token.
+
+For API testing tools, protected routes also accept:
+
+```txt
+Authorization: Bearer <token>
+```
+
+Token lifetime:
+
+```txt
+Access token: 15 minutes
+Password reset JWT: 10 minutes
+```
+
+---
+
+## API Routes
+
+### Auth
+
+| Method | Endpoint | Description | Auth |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | Register a new user | Public |
+| POST | `/auth/login` | Login and set HttpOnly cookie | Public |
+| GET | `/auth/me` | Get current authenticated user | Cookie or Bearer |
+| POST | `/auth/logout` | Revoke current token and clear cookie | Cookie or Bearer |
+| POST | `/auth/reset` | Request password reset token | Public |
+| POST | `/auth/reset/confirm` | Exchange reset token for reset JWT | Public |
+| POST | `/auth/change-password` | Set new password using reset JWT | Bearer reset JWT |
+
+### Links
+
+| Method | Endpoint | Description | Auth |
+| --- | --- | --- | --- |
+| POST | `/link/create` | Create a short link | Cookie or Bearer |
+| GET | `/link/dashboard?page=1&limit=10` | Get paginated dashboard links | Cookie or Bearer |
+| DELETE | `/link/:id` | Soft delete a link | Cookie or Bearer |
+| GET | `/:slug` | Redirect to the original URL | Public |
+
+### Profile
+
+| Method | Endpoint | Description | Auth |
+| --- | --- | --- | --- |
+| GET | `/profile/info` | Get compact user info | Cookie or Bearer |
+| GET | `/profile` | Get full profile | Cookie or Bearer |
+| PATCH | `/profile/edit` | Edit profile and upload photo | Cookie or Bearer |
+| PATCH | `/profile/change/password` | Change password using old password | Cookie or Bearer |
+
+### Static Files and Docs
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/img/*` | Serve uploaded images from `public/img` |
+| GET | `/swagger/index.html` | Swagger API documentation |
+
+---
+
+## Request Examples
+
+### Register
+
+```bash
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+```
+
+### Login and Save Cookie
+
+```bash
+curl -i -c cookies.txt -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+```
+
+### Get Current User with Cookie
+
+```bash
+curl -b cookies.txt http://localhost:8080/auth/me
+```
+
+### Create Short Link with Cookie
+
+```bash
+curl -b cookies.txt -X POST http://localhost:8080/link/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origin_link": "https://example.com/very/long/url",
+    "slug": "my-link"
+  }'
+```
+
+### Create Short Link Without Custom Slug
+
+```bash
+curl -b cookies.txt -X POST http://localhost:8080/link/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origin_link": "https://example.com/very/long/url"
+  }'
+```
+
+### Dashboard Links
+
+```bash
+curl -b cookies.txt "http://localhost:8080/link/dashboard?page=1&limit=10"
+```
+
+### Redirect
+
+```bash
+curl -I http://localhost:8080/my-link
+```
+
+---
+
+## API Response Format
+
+Successful responses usually follow this shape:
+
+```json
+{
+  "message": "Short link created successfully",
+  "data": {},
+  "isSuccess": true
+}
+```
+
+Error responses usually follow this shape:
+
+```json
+{
+  "message": "Invalid request payload",
+  "isSuccess": false,
+  "error": "error detail"
+}
+```
+
+---
+
+## Database Summary
+
+The migrations create these main resources:
+
+- `users`
+- `profiles`
+- `token_type` enum
+- `tokens`
+- `links`
+- related indexes
+
+The `tokens` table stores access tokens and reset tokens with expiration and revocation status. The `links` table stores original URLs, unique slugs, click counts, owner ID, and soft-delete fields.
+
+Slug rules:
+
+- Must be 3-50 characters
+- Can contain letters, numbers, and hyphens
+- Must be unique
+- Should not conflict with reserved application paths such as `auth`, `dashboard`, `link`, `profile`, `swagger`, or `img`
+
+---
+
+## Frontend Integration
+
+The frontend should call this API with credentials enabled.
+
+Example frontend env:
 
 ```env
 VITE_API_URL=http://localhost:8080
 VITE_SHORT_URL_BASE=http://localhost:8080
 ```
 
-Variables:
-
-| Variable | Description |
-| --- | --- |
-| `VITE_API_URL` | Base URL of the Cliq backend API |
-| `VITE_SHORT_URL_BASE` | Base URL used when displaying generated short links |
-
-If the backend runs at `http://localhost:8080`, keep both values as `http://localhost:8080`.
-
----
-
-## Installation
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-Frontend URL:
-
-```txt
-http://localhost:5173
-```
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Preview production build:
-
-```bash
-npm run preview
-```
-
-Run lint:
-
-```bash
-npm run lint
-```
-
----
-
-## Available Scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start Vite development server |
-| `npm run build` | Build production assets |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint |
-
----
-
-## Routes
-
-```txt
-/                            Landing page
-/auth/register               Register page
-/auth/login                  Login page
-/dashboard                   User dashboard
-/dashboard/create            Create short link page
-/dashboard/profile           Profile page
-/dashboard/links/:id/delete  Delete link action
-/logout                      Logout action
-```
-
-Route behavior:
-
-- `/` uses `optionalAuthLoader`.
-- `/auth/register` and `/auth/login` use `guestOnlyLoader`.
-- `/dashboard/*` uses `requireAuthLoader`.
-- `/logout` calls the backend logout endpoint and redirects to login.
-
----
-
-## Backend API Integration
-
-All API requests go through `src/utils/api.js`.
+Example fetch behavior:
 
 ```js
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
-export async function apiRequest(path, options = {}) {
-  return fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    ...options,
-  });
-}
+fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+  credentials: "include",
+});
 ```
 
-The important part is:
-
-```js
-credentials: "include"
-```
-
-This allows the browser to send the backend's HttpOnly `access_token` cookie with requests.
-
----
-
-## Authentication Flow
-
-The frontend does not store JWTs in `localStorage`.
-
-1. User submits the login form.
-2. `loginAction` sends credentials to `POST /auth/login`.
-3. The backend sets an HttpOnly `access_token` cookie.
-4. `getCurrentUser()` calls `GET /auth/me` with `credentials: "include"`.
-5. Protected routes use `requireAuthLoader`.
-6. Guest-only pages redirect authenticated users away from login/register.
-7. Logout calls `POST /auth/logout` and redirects to `/auth/login`.
-
-Because the cookie is HttpOnly, JavaScript cannot read it directly. That is expected and safer than storing tokens manually in browser storage.
-
----
-
-## API Endpoints Used
-
-| Frontend Feature | Backend Endpoint |
-| --- | --- |
-| Register | `POST /auth/register` |
-| Login | `POST /auth/login` |
-| Current user | `GET /auth/me` |
-| Logout | `POST /auth/logout` |
-| Create short link | `POST /link/create` |
-| Dashboard links | `GET /link/dashboard?page=1&limit=10` |
-| Delete link | `DELETE /link/:id` |
-
-The public short link redirect is handled by the backend:
-
-```txt
-GET /:slug
-```
-
----
-
-## Slug Validation
-
-The frontend validates custom slugs before sending them to the backend.
-
-Rules:
-
-- Optional field
-- Must be 3-50 characters when provided
-- Can contain only letters, numbers, and hyphens
-- Spaces are converted to hyphens
-- Reserved slugs are blocked
-
-Reserved slugs:
-
-```txt
-api, login, register, dashboard, auth, link, profile, swagger, img
-```
-
-The backend should still validate slugs too. Frontend validation is for user experience, not security.
-
----
-
-## CORS and Cookie Requirements
-
-Because authentication uses cookies, the backend must allow the frontend origin.
-
-Backend `.env` example:
+CORS must allow the frontend origin:
 
 ```env
 ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-COOKIE_SECURE=false
-COOKIE_SAMESITE=lax
 ```
-
-For local development, this is usually enough.
-
-For production:
-
-- Use HTTPS.
-- Set `COOKIE_SECURE=true`.
-- Use a correct production frontend URL in `ALLOWED_ORIGINS`.
-- Use `COOKIE_SAMESITE=none` only if the frontend and backend are on different sites and cross-site cookies are required.
 
 ---
 
 ## Development Notes
 
-- Do not save the backend access token in `localStorage` or `sessionStorage`.
-- Keep `VITE_API_URL` pointed to the backend repo deployment.
-- Keep `VITE_SHORT_URL_BASE` pointed to the public backend domain used for redirects.
-- React Router actions are used for form submission instead of manually handling all submits with component state.
-- Loaders protect routes by calling `/auth/me`, not by checking a locally saved token.
+- Do not store the access token in frontend `localStorage`.
+- Use the HttpOnly cookie flow for browser authentication.
+- Use Bearer tokens only for manual API testing or reset-password JWT flow.
+- Use `COOKIE_SECURE=true` in production with HTTPS.
+- Use `COOKIE_SAMESITE=none` only when frontend and backend are on different HTTPS sites and cross-site cookies are required.
+- Keep Swagger comments synchronized with the actual router paths.
+
+Known cleanup items in the current code:
+
+- Swagger title in `cmd/main.go` still says `Vanwallet`; it should be renamed to `Cliq`.
+- The profile password Swagger annotation says `/profile/password`, but the router uses `/profile/change/password`.
 
 ---
 
