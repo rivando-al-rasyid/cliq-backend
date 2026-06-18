@@ -466,11 +466,6 @@ ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 - Use `COOKIE_SAMESITE=none` only when frontend and backend are on different HTTPS sites and cross-site cookies are required.
 - Keep Swagger comments synchronized with the actual router paths.
 
-Known cleanup items in the current code:
-
-- Swagger title in `cmd/main.go` still says `Vanwallet`; it should be renamed to `Cliq`.
-- The profile password Swagger annotation says `/profile/password`, but the router uses `/profile/change/password`.
-
 ---
 
 ## License
