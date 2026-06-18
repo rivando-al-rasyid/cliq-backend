@@ -40,13 +40,12 @@ func NewProfileController(profileservice *service.ProfileService) *ProfileContro
 // @Failure      500            {object}  dto.Response{error}
 // @Router       /profile [get]
 func (p *ProfileController) GetProfile(ctx *gin.Context) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing claims")))
+	email, ok := pkg.CurrentUserEmail(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing user context")))
 		return
 	}
 
-	email := claims.(pkg.Claims).Email
 	profile, err := p.profileservice.GetProfile(ctx.Request.Context(), email)
 	if err != nil {
 		if err.Error() == "user profile not found" {
@@ -98,12 +97,11 @@ func (p *ProfileController) validateAndSavePhoto(ctx *gin.Context, photo *multip
 // @Failure      500            {object}  dto.Response{error}
 // @Router       /profile/edit [PATCH]
 func (p *ProfileController) EditProfile(ctx *gin.Context) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing claims")))
+	email, ok := pkg.CurrentUserEmail(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing user context")))
 		return
 	}
-	email := claims.(pkg.Claims).Email
 
 	var body dto.UpdateProfileRequest
 	if err := ctx.ShouldBindWith(&body, binding.FormMultipart); err != nil {
@@ -114,10 +112,10 @@ func (p *ProfileController) EditProfile(ctx *gin.Context) {
 
 	updates := map[string]any{}
 	if body.FullName != nil {
-		updates["full_name"] = body.FullName
+		updates["full_name"] = *body.FullName
 	}
 	if body.Phone != nil {
-		updates["phone"] = body.Phone
+		updates["phone"] = *body.Phone
 	}
 	if body.Photo != nil {
 		photoURL, err := p.validateAndSavePhoto(ctx, body.Photo, email)
@@ -161,12 +159,11 @@ func (p *ProfileController) EditProfile(ctx *gin.Context) {
 // @Failure      500            {object}  dto.Response{error}
 // @Router       /profile/password [PATCH]
 func (p *ProfileController) EditPassword(ctx *gin.Context) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing claims")))
+	email, ok := pkg.CurrentUserEmail(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing user context")))
 		return
 	}
-	email := claims.(pkg.Claims).Email
 
 	var body dto.ChangePasswordRequest
 	if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -199,13 +196,16 @@ func (p *ProfileController) EditPassword(ctx *gin.Context) {
 // @Failure      500            {object}  dto.Response{error}
 // @Router       /profile/info [get]
 func (p *ProfileController) GetUserInfo(ctx *gin.Context) {
-	claims, exists := ctx.Get("claims")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing claims")))
+	email, ok := pkg.CurrentUserEmail(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing user context")))
 		return
 	}
-	claimsTyped := claims.(pkg.Claims)
-	email := claimsTyped.Email
+	userID, ok := pkg.CurrentUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, dto.NewError("Unauthorized", errors.New("missing user context")))
+		return
+	}
 
 	profile, err := p.profileservice.GetUserInfo(ctx.Request.Context(), email)
 	if err != nil {
@@ -214,7 +214,7 @@ func (p *ProfileController) GetUserInfo(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.NewSuccess("User info successfully retrieved", dto.UserInfoResponse{
-		ID:       claimsTyped.ID.String(),
+		ID:       userID.String(),
 		Email:    email,
 		FullName: profile.FullName,
 		Phone:    profile.Phone,

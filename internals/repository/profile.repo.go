@@ -133,14 +133,14 @@ func (p *ProfileRepo) GetUserInfo(ctx context.Context, email string) (model.Prof
 	var profile model.Profile
 
 	err := p.db.QueryRow(ctx, `
-        SELECT
-            p.full_name,
-            p.phone,
-            p.photo,
-       FROM profiles p
-        JOIN users u ON p.user_id = u.id
-        WHERE u.email = $1
-        GROUP BY p.full_name, p.phone, p.photo`, email,
+		SELECT
+			p.full_name,
+			p.phone,
+			p.photo
+		FROM profiles p
+		JOIN users u ON p.user_id = u.id
+		WHERE u.email = $1
+		LIMIT 1`, email,
 	).Scan(&profile.FullName, &profile.Phone, &profile.Photo)
 
 	if err != nil {

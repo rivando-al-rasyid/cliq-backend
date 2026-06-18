@@ -14,7 +14,7 @@ func ProfileRouter(router *gin.Engine, db *pgxpool.Pool) {
 	profServ := service.NewProfileService(profRepo)
 	profCont := controller.NewProfileController(profServ)
 
-	profileRouter := router.Group("/profile", middleware.VerifyTokenWithDB(db))
+	profileRouter := router.Group("/profile", middleware.AuthRequired(db))
 
 	// Header info — lightweight, called on every page load
 	profileRouter.GET("/info", profCont.GetUserInfo)
