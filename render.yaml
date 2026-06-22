@@ -4,9 +4,7 @@ projects:
   - name: cliq
     environments:
       - name: Production
-
         services:
-          # ── Backend ─────────────────────────────────────
           - type: web
             name: cliq-backend
             runtime: docker
@@ -17,56 +15,16 @@ projects:
             dockerfilePath: ./Dockerfile
             autoDeployTrigger: commit
             envVars:
-              # ── App Config ─────────────────────────────
-              - key: APP_NAME
-                value: cliq
+              - key: PORT
+                value: 8080
 
               - key: APP_ENV
                 value: production
 
-              # Render biasanya pakai PORT, tapi app kamu pakai APP_PORT.
-              # Saya set dua-duanya supaya lebih aman.
-              - key: PORT
-                value: 8080
-
-              - key: APP_PORT
-                value: 8080
-
-              # ── Database Config ────────────────────────
-              - key: DB_USER
+              - key: DATABASE_URL
                 fromDatabase:
                   name: cliq-postgres
-                  property: user
-
-              - key: DB_PASS
-                fromDatabase:
-                  name: cliq-postgres
-                  property: password
-
-              - key: DB_NAME
-                fromDatabase:
-                  name: cliq-postgres
-                  property: database
-
-              - key: DB_HOST
-                fromDatabase:
-                  name: cliq-postgres
-                  property: host
-
-              - key: DB_PORT
-                fromDatabase:
-                  name: cliq-postgres
-                  property: port
-
-              # ── JWT Config ─────────────────────────────
-              - key: JWT_ISSUER
-                value: cliq
-
-              - key: JWT_SECRET
-                sync: false
-
-              - key: JWT_EXPIRED
-                value: 15m
+                  property: connectionString
 
               - key: REDIS_URL
                 fromService:
@@ -74,32 +32,37 @@ projects:
                   name: cliq-redis
                   property: connectionString
 
-              - key: RDB_ADDR
-                fromService:
-                  type: redis
-                  name: cliq-redis
-                  property: connectionString
+              - key: JWT_ISSUER
+                value: cliq
 
-              - key: RDB_USER
-                value: ""
+              - key: JWT_SECRET
+                sync: false
 
-              - key: RDB_PASS
-                value: ""
+              - key: ALLOWED_ORIGIN
+                value: https://cliq-frontend.onrender.com
 
-          # ── Frontend ────────────────────────────────────
           - type: web
             name: cliq-frontend
-            runtime: static
-            repo: https://github.com/rivando-al-rasyid/cliq-frontend
+            runtime: docker
+            repo: https://github.com/rivando-al-rasyid/cliq-react
             plan: free
             region: singapore
-            buildCommand: npm install && npm run build
+            dockerContext: .
+            dockerfilePath: ./Dockerfile
             autoDeployTrigger: commit
             envVars:
-              - key: VITE_API_URL
+              - key: PORT
+                value: 8080
+
+              - key: BACKEND_URL
                 value: https://cliq-backend.onrender.com
 
-          # ── Redis ───────────────────────────────────────
+              - key: VITE_API_BASE_URL
+                value: /api
+
+              - key: VITE_API_URL
+                value: /api
+
           - type: redis
             name: cliq-redis
             plan: free
