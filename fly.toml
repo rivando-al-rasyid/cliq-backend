@@ -1,0 +1,23 @@
+app = "cliq-backend"
+primary_region = "sin"
+
+[build]
+  image = "ghcr.io/rivando-al-rasyid/cliq-backend:latest"
+
+[env]
+  PORT = "8080"
+  APP_ENV = "production"
+  JWT_ISSUER = "cliq"
+  ALLOWED_ORIGIN = "https://cliq-frontend-six.vercel.app"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
